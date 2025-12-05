@@ -35,6 +35,8 @@
     </style>
     <link rel="preload" href="styles.css?v=1.0.4" as="style" />
     <link rel="stylesheet" href="styles.css?v=1.0.4" />
+    <script src="translations.js?v=1.0.1"></script>
+    <script src="i18n.js?v=3.0.1"></script>
     <link rel="icon" href="images/pwa/app-icon-192.png" type="image/png" />
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#1C1C1C" />
@@ -142,9 +144,9 @@
         <p class="popup-message" id="popup-message"></p>
 
         <div class="popup-buttons">
-          <button class="popup-btn cancel" id="popup-cancel">Cancelar</button>
+          <button class="popup-btn cancel" id="popup-cancel" data-i18n="menu.cancel">Cancelar</button>
 
-          <button class="popup-btn confirm" id="popup-confirm">
+          <button class="popup-btn confirm" id="popup-confirm" data-i18n="menu.confirm">
             Confirmar
           </button>
         </div>
@@ -173,6 +175,7 @@
               type="button"
               class="app-info-option"
               aria-label="Tela cheia"
+              data-i18n-aria="menu.fullscreen"
             >
               <img
                 src="images/icons/Fullscreen.svg"
@@ -187,6 +190,7 @@
               type="button"
               class="app-info-option"
               aria-label="Limpar cache"
+              data-i18n-aria="menu.clearCache"
             >
               <img
                 src="images/icons/icon-limpar.svg"
@@ -227,6 +231,25 @@
                 aria-hidden="true"
               />
             </a>
+          </div>
+
+          <!-- Seletor de Idioma -->
+          <div class="app-info-language">
+            <span class="app-info-language__label" data-i18n="menu.language">Idioma</span>
+            <div class="app-info-language__options" id="language-selector">
+              <button type="button" class="app-info-language__btn" data-locale="pt" aria-label="Português">
+                <span class="app-info-language__flag">🇧🇷</span>
+                <span class="app-info-language__name">PT</span>
+              </button>
+              <button type="button" class="app-info-language__btn" data-locale="en" aria-label="English">
+                <span class="app-info-language__flag">🇺🇸</span>
+                <span class="app-info-language__name">EN</span>
+              </button>
+              <button type="button" class="app-info-language__btn" data-locale="zh" aria-label="中文">
+                <span class="app-info-language__flag">🇨🇳</span>
+                <span class="app-info-language__name">中文</span>
+              </button>
+            </div>
           </div>
 
           <span class="app-info-version" id="app-info-version"></span>
@@ -405,6 +428,12 @@
               .catch(() => {});
           });
         }
+      }
+
+      // --- Helper para tradução de nomes de ambiente ---
+      function getTranslatedEnvName(envKey, fallback) {
+        const rawName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.[envKey]?.name) || fallback || envKey;
+        return typeof translateText === 'function' ? translateText(rawName) : rawName;
       }
 
       // --- SPA Core ---
@@ -787,10 +816,11 @@
           
           if (feature.action === 'executeScene') {
              const btnId = `scene-btn-${envKey}`;
+             const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
              return `
             <div class="${cardClass}" id="${btnId}" onclick="handleEnvironmentScene('${envKey}', '${btnId}')">
-              <img class="control-icon" src="images/icons/${feature.icon}" alt="${feature.label}">
-              <div class="control-label">${feature.label}</div>
+              <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
+              <div class="control-label">${label}</div>
             </div>
           `;
           }
@@ -798,12 +828,13 @@
           if (feature.route === 'conforto') {
              const optionsId = `conforto-options-${envKey}`;
              const triggerId = `conforto-trigger-${envKey}`;
+             const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
              return `
             <div class="conforto-container" data-conforto-env="${envKey}">
               <div class="${cardClass} conforto-card" id="${triggerId}" data-conforto-options="${optionsId}" onclick="toggleConfortoOptions('${optionsId}', '${envKey}')">
                 <div class="conforto-card-main">
-                  <img class="control-icon" src="images/icons/${feature.icon}" alt="${feature.label}">
-                  <div class="control-label">${feature.label}</div>
+                  <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
+                  <div class="control-label">${label}</div>
                 </div>
               </div>
               <div id="${optionsId}" class="conforto-options" aria-hidden="true">
@@ -825,10 +856,11 @@
           `;
           }
 
+          const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
           return `
             <div class="${cardClass}" onclick="spaNavigate('${envKey}-${feature.route}')">
-              <img class="control-icon" src="images/icons/${feature.icon}" alt="${feature.label}">
-              <div class="control-label">${feature.label}</div>
+              <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
+              <div class="control-label">${label}</div>
             </div>
           `;
         }).join('');
@@ -1154,23 +1186,31 @@
       }
 
       function renderMediaDeviceCard(device) {
-        const safeName = escapeHtml(device?.name || 'Dispositivo');
-        const safeDescription = device?.description
-          ? `<p class="media-device-card__meta">${escapeHtml(device.description)}</p>`
+        const rawName = device?.name || 'Dispositivo';
+        const translatedName = typeof translateText === 'function' ? translateText(rawName) : rawName;
+        const safeName = escapeHtml(translatedName);
+        const rawDescription = device?.description || '';
+        const translatedDescription = rawDescription && typeof translateText === 'function' ? translateText(rawDescription) : rawDescription;
+        const safeDescription = translatedDescription
+          ? `<p class="media-device-card__meta">${escapeHtml(translatedDescription)}</p>`
           : '';
         const deviceId = device?.id || '';
         const safeIdAttr = escapeHtml(deviceId);
         const cardId = `media-card-${Math.random().toString(36).substr(2, 9)}`;
 
+        const nameLabel = typeof translateText === 'function' ? translateText(safeName) : safeName;
+        const onLabel = typeof translateText === 'function' ? translateText('On') : 'On';
+        const offLabel = typeof translateText === 'function' ? translateText('Off') : 'Off';
+
         return `
           <article class="media-device-card" data-device-id="${safeIdAttr}" id="${cardId}">
             <div class="media-device-card__info">
-              <span class="media-device-card__name">${safeName}</span>
+              <span class="media-device-card__name">${nameLabel}</span>
               ${safeDescription}
             </div>
             <div class="media-device-card__actions">
-              <button type="button" class="media-device-card__btn media-device-card__btn--on" data-device-id="${safeIdAttr}" data-card-id="${cardId}" onclick="handleMediaDeviceCommand(this.dataset.deviceId, 'on', this.dataset.cardId)">On</button>
-              <button type="button" class="media-device-card__btn media-device-card__btn--off" data-device-id="${safeIdAttr}" data-card-id="${cardId}" onclick="handleMediaDeviceCommand(this.dataset.deviceId, 'off', this.dataset.cardId)">Off</button>
+              <button type="button" class="media-device-card__btn media-device-card__btn--on" data-device-id="${safeIdAttr}" data-card-id="${cardId}" onclick="handleMediaDeviceCommand(this.dataset.deviceId, 'on', this.dataset.cardId)">${onLabel}</button>
+              <button type="button" class="media-device-card__btn media-device-card__btn--off" data-device-id="${safeIdAttr}" data-card-id="${cardId}" onclick="handleMediaDeviceCommand(this.dataset.deviceId, 'off', this.dataset.cardId)">${offLabel}</button>
             </div>
           </article>
         `;
@@ -1187,22 +1227,31 @@
         const safeEnvKey = escapeHtml(envKey);
         const safeIcon = escapeHtml(icon);
         const deviceCount = Array.isArray(devices) ? devices.filter(Boolean).length : 0;
-        const sectionSubtitle = subtitle || `${deviceCount} conectado${deviceCount === 1 ? '' : 's'}`;
+        const connectedLabel = typeof translateText === 'function'
+          ? translateText(deviceCount === 1 ? 'conectado' : 'conectados')
+          : (deviceCount === 1 ? 'conectado' : 'conectados');
+        const rawSubtitle = subtitle || `${deviceCount} ${connectedLabel}`;
+        const sectionSubtitle = typeof translateText === 'function' ? translateText(rawSubtitle) : rawSubtitle;
+        const rawTitle = title || '';
+        const translatedTitle = typeof translateText === 'function' ? translateText(rawTitle) : rawTitle;
         const sectionId = `${envKey}-${groupKey}-section`;
 
         const hasDevices = devices.length > 0;
+        const emptyLabel = typeof translateText === 'function'
+          ? translateText('Nenhum dispositivo configurado para esta seção.')
+          : 'Nenhum dispositivo configurado para esta seção.';
         const cards = hasDevices
           ? devices.map((device) => renderMediaDeviceCard(device)).join('')
-          : '<div class="media-panel__empty">Nenhum dispositivo configurado para esta seção.</div>';
+          : `<div class="media-panel__empty">${emptyLabel}</div>`;
 
         return `
           <section class="media-panel__section" data-group="${groupKey}">
             <header class="media-panel__section-header">
               <div class="media-panel__section-headline">
                 <div class="media-panel__section-summary">
-                  <img src="images/icons/${safeIcon}" alt="${title}" class="media-panel__section-icon">
+                  <img src="images/icons/${safeIcon}" alt="${translatedTitle}" class="media-panel__section-icon">
                   <div class="media-panel__section-title">
-                    <h2>${title}</h2>
+                    <h2>${translatedTitle}</h2>
                     <p>${sectionSubtitle}</p>
                   </div>
                 </div>
@@ -1211,8 +1260,8 @@
                 </button>
               </div>
               <div class="media-panel__actions media-panel__actions--stacked">
-                <button type="button" class="media-panel__action-btn media-panel__action-btn--on" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'on')">Ligar</button>
-                <button type="button" class="media-panel__action-btn" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'off')">Desligar</button>
+                <button type="button" class="media-panel__action-btn media-panel__action-btn--on" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'on')">${typeof translateText === 'function' ? translateText('Ligar') : 'Ligar'}</button>
+                <button type="button" class="media-panel__action-btn" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'off')">${typeof translateText === 'function' ? translateText('Desligar') : 'Desligar'}</button>
               </div>
             </header>
             <div class="media-panel__body" data-section="${sectionId}">
@@ -1249,6 +1298,16 @@
         const transportAvailableAttr = 'true';
         const sliderWrapperDisabledClass = !isPowerOn ? ' is-disabled' : '';
 
+        const audioTitle = typeof translateText === 'function' ? translateText('Áudio') : 'Áudio';
+        const connectedLabel = typeof translateText === 'function'
+          ? translateText(isPowerOn ? 'Conectado' : 'Conectado')
+          : 'Conectado';
+        const playLabel = typeof translateText === 'function' ? translateText('Reproduzir') : 'Reproduzir';
+        const pauseLabel = typeof translateText === 'function' ? translateText('Pausar') : 'Pausar';
+        const muteLabel = typeof translateText === 'function' ? translateText('Ativar mute') : 'Ativar mute';
+        const onLabel = typeof translateText === 'function' ? translateText('Ligar') : 'Ligar';
+        const offLabel = typeof translateText === 'function' ? translateText('Desligar') : 'Desligar';
+
         return `
           <section class="media-panel__section media-panel__section--playback" data-group="playback">
             <header class="media-panel__section-header">
@@ -1256,8 +1315,8 @@
                 <div class="media-panel__section-summary">
                   <img src="images/icons/icon-musica.svg" alt="Áudio" class="media-panel__section-icon">
                   <div class="media-panel__section-title">
-                    <h2>Áudio</h2>
-                    <p>1 Conectado</p>
+                    <h2>${audioTitle}</h2>
+                    <p>1 ${connectedLabel}</p>
                   </div>
                 </div>
                 <button type="button" class="media-panel__section-toggle" data-section="${sectionId}" aria-expanded="false" onclick="toggleMediaSection('${sectionId}')">
@@ -1265,22 +1324,22 @@
                 </button>
               </div>
               <div class="media-panel__actions media-panel__actions--stacked">
-                <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on')">Ligar</button>
-                <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off')">Desligar</button>
+                <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on')">${onLabel}</button>
+                <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off')">${offLabel}</button>
               </div>
             </header>
             <div class="media-panel__body" data-section="${sectionId}">
               <div class="media-playback-controls">
                 <div class="media-playback-transport">
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play')" aria-label="Reproduzir"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play')" aria-label="${playLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-play.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause')" aria-label="Pausar"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause')" aria-label="${pauseLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-pause.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
                 </div>
                 <div class="media-playback-volume" data-env="${safeEnvKey}">
-                  <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="Ativar mute" aria-pressed="false"${muteDisabledAttr}>
+                  <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="${muteLabel}" aria-pressed="false"${muteDisabledAttr}>
                     <img src="images/icons/icon-volume.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--unmuted" aria-hidden="true">
                     <img src="images/icons/icon-mute.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--muted" aria-hidden="true">
                   </button>
@@ -1295,17 +1354,18 @@
       }
 
       function renderMediaControlPanel(envKey, controlConfig) {
-        const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.[envKey]?.name) || ENVIRONMENT_LABELS?.[envKey] || envKey;
+        const envName = getTranslatedEnvName(envKey, envKey);
+        const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
         const description = controlConfig?.description ? `<p class="media-panel__description">${escapeHtml(controlConfig.description)}</p>` : '';
         const projectorSection = renderMediaDeviceSection(envKey, 'projectors', {
-          title: 'Projetores',
+          title: typeof translateText === 'function' ? translateText('Projetores') : 'Projetores',
           icon: 'icon-projetor.svg',
           subtitle: '',
           devices: Array.isArray(controlConfig?.projectors) ? controlConfig.projectors : []
         });
 
         const tvSection = renderMediaDeviceSection(envKey, 'televisions', {
-          title: 'Televisores',
+          title: typeof translateText === 'function' ? translateText('Televisores') : 'Televisores',
           icon: 'icon-tv.svg',
           subtitle: '',
           devices: Array.isArray(controlConfig?.televisions) ? controlConfig.televisions : []
@@ -1314,7 +1374,7 @@
         const computerDevices = Array.isArray(controlConfig?.computers) ? controlConfig.computers : [];
         const computerSection = computerDevices.length
           ? renderMediaDeviceSection(envKey, 'computers', {
-              title: 'Computadores',
+              title: typeof translateText === 'function' ? translateText('Computadores') : 'Computadores',
               icon: 'icon-pc.svg',
               subtitle: '',
               devices: computerDevices
@@ -1334,7 +1394,7 @@
     <button class="back-btn" onclick="spaNavigate('${envKey}')">
       <img src="images/icons/back-button.svg" alt="Voltar">
     </button>
-    <h1 class="page-title">${envName} | Mídia</h1>
+    <h1 class="page-title">${envName}</h1>
   </div>
 
   <div class="midia-wrapper ambiente-grid media-panel-wrapper">
@@ -1357,18 +1417,22 @@
           return renderMediaControlPanel(envKey, mediaControlConfig);
         }
 
-        const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.[envKey]?.name) || ENVIRONMENT_LABELS?.[envKey] || envKey;
+        const envName = getTranslatedEnvName(envKey, envKey);
+        const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
         const mediaFeatures = getMediaFeatures(envKey);
         const hasMedia = mediaFeatures.length > 0;
 
         const cards = hasMedia
-          ? mediaFeatures.map(feature => `
+          ? mediaFeatures.map(feature => {
+              const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
+              return `
               <div class="control-card" onclick="spaNavigate('${envKey}-${feature.route}')">
-                <img class="control-icon" src="images/icons/${feature.icon}" alt="${feature.label}">
-                <div class="control-label">${feature.label}</div>
+                <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
+                <div class="control-label">${label}</div>
               </div>
-            `).join('')
-          : '<div class="midia-empty-state">Nenhum dispositivo de mídia disponível para este ambiente.</div>';
+            `;
+            }).join('')
+          : '<div class="midia-empty-state">' + (typeof translateText === 'function' ? translateText('Nenhum dispositivo de mídia disponível para este ambiente.') : 'Nenhum dispositivo de mídia disponível para este ambiente.') + '</div>';
 
         return `
 <div class="top-bar-custom"></div>
@@ -1379,7 +1443,7 @@
     <button class="back-btn" onclick="spaNavigate('${envKey}')">
       <img src="images/icons/back-button.svg" alt="Voltar">
     </button>
-    <h1 class="page-title">${envName} | Mídia</h1>
+    <h1 class="page-title">${envName}</h1>
   </div>
 
   <div class="midia-wrapper ambiente-grid">
@@ -1449,17 +1513,19 @@
       }
 
       function renderCurtainSection(section) {
+        // Traduz o nome da seção
+        const sectionName = typeof translateText === 'function' ? translateText(section.name) : section.name;
         return `
         <section class="curtain-section" data-section="${section.key}">
             <div class="curtain-section__wrapper">
                 <header class="curtain-section__header">
-                    <h2 class="curtain-section__title">${section.name}</h2>
+                    <h2 class="curtain-section__title">${sectionName}</h2>
                     <div class="curtain-section__line"></div>
                 </header>
                 <div class="curtain-section__grid">
                     ${section.curtains
                       .map((curtain) =>
-                        renderCurtainControlCard(curtain, section.name)
+                        renderCurtainControlCard(curtain, sectionName)
                       )
                       .join("")}
                 </div>
@@ -2485,7 +2551,7 @@
         `,
 
         ambiente2: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente2?.name) || 'Living';
+          const envName = getTranslatedEnvName('ambiente2', 'Living');
           return `
 <div class="top-bar-custom"></div>
 
@@ -2664,7 +2730,7 @@
         `,
 
         ambiente3: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente3?.name) || 'Piscina';
+          const envName = getTranslatedEnvName('ambiente3', 'Piscina');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3310,7 +3376,7 @@
         `,
 
         ambiente5: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente5?.name) || 'Serviço';
+          const envName = getTranslatedEnvName('ambiente5', 'Serviço');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3335,7 +3401,7 @@
         },
 
         ambiente1: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente1?.name) || 'Varanda';
+          const envName = getTranslatedEnvName('ambiente1', 'Varanda');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3863,7 +3929,7 @@
         `,
 
         ambiente4: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente4?.name) || 'Externa';
+          const envName = getTranslatedEnvName('ambiente4', 'Externa');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3888,7 +3954,7 @@
         },
 
         ambiente6: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente6?.name) || 'Circulação';
+          const envName = getTranslatedEnvName('ambiente6', 'Circulação');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3913,7 +3979,7 @@
         },
 
         ambiente7: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente7?.name) || 'Suíte I';
+          const envName = getTranslatedEnvName('ambiente7', 'Suíte I');
           return `
 <div class="top-bar-custom"></div>
 
@@ -4475,7 +4541,7 @@
         `,
 
         ambiente8: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente8?.name) || 'Suíte II';
+          const envName = getTranslatedEnvName('ambiente8', 'Suíte II');
           return `
 <div class="top-bar-custom"></div>
 
@@ -5037,7 +5103,7 @@
         `,
 
         ambiente9: () => {
-          const envName = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.ambiente9?.name) || 'Suíte Master';
+          const envName = getTranslatedEnvName('ambiente9', 'Suíte Master');
           return `
 <div class="top-bar-custom"></div>
 
@@ -5645,23 +5711,10 @@
         if (!route || !route.startsWith("ambiente")) return null;
         const parts = route.split("-");
         const envKey = parts[0];
-        const suffix = parts.slice(1).join("-");
         const envLabel = ENVIRONMENT_LABELS[envKey];
         if (!envLabel) return null;
-        const pageLabel = Object.prototype.hasOwnProperty.call(
-          PAGE_SUFFIX_LABELS,
-          suffix
-        )
-          ? PAGE_SUFFIX_LABELS[suffix]
-          : suffix
-          ? suffix
-              .split("-")
-              .map((segment) =>
-                segment ? segment[0].toUpperCase() + segment.slice(1) : segment
-              )
-              .join(" ")
-          : PAGE_SUFFIX_LABELS[""];
-        return `${envLabel} | ${pageLabel}`;
+        // Apenas o nome do ambiente, já sujeito a tradução
+        return typeof translateText === 'function' ? translateText(envLabel) : envLabel;
       }
 
       function renderSpa() {
@@ -5794,19 +5847,21 @@
                   hasPhoto = Boolean(ROOM_IMAGE_DATA[r.route]);
                 }
                 const ids = roomDevices[r.route] || [];
+                // Traduz o nome do ambiente
+                const translatedName = typeof translateText === 'function' ? translateText(r.name) : r.name;
                 return `
 
                     <div class="room-card ${hasPhoto ? "has-photo" : ""}">
 
                         ${
                           hasPhoto
-                            ? renderRoomResponsivePhoto(r.route, r.name, {
+                            ? renderRoomResponsivePhoto(r.route, translatedName, {
                                 eager: r.route === firstVisibleRoute,
                               })
                             : ""
                         }
 
-                        <span>${r.name}</span>
+                        <span>${translatedName}</span>
 
                         ${
                           ids.length > 0
@@ -6006,9 +6061,11 @@
           card.setAttribute('data-device-id', light.id);
           card.setAttribute('onclick', 'toggleRoomControl(this)');
 
+          // Traduz o nome da luz
+          const lightName = typeof translateText === 'function' ? translateText(light.name) : light.name;
           card.innerHTML = `
-            <img class="control-icon" src="images/icons/icon-small-light-off.svg" alt="${light.name}">
-            <div class="control-label">${light.name}</div>
+            <img class="control-icon" src="images/icons/icon-small-light-off.svg" alt="${lightName}">
+            <div class="control-label">${lightName}</div>
           `;
 
           wrapper.appendChild(card);

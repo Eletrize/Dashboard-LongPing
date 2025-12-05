@@ -34,6 +34,15 @@ if (typeof window !== "undefined") {
   window.isDebugEnabled = isDebugEnabled;
 }
 
+// Tradução simples para UI com placeholders
+function trUi(key, params) {
+  var template = typeof translateText === "function" ? translateText(key) : key;
+  if (!params) return template;
+  return Object.keys(params).reduce(function(acc, name) {
+    return acc.split("{" + name + "}").join(params[name]);
+  }, template);
+}
+
 const CONTROL_SELECTOR =
   ".room-control[data-device-id], .control-card[data-device-id]";
 const MASTER_BUTTON_SELECTOR = ".room-master-btn[data-device-ids]";
@@ -3158,8 +3167,9 @@ function toggleDevice(el, deviceType) {
 // --- Controle do Hubitat ---
 
 async function brutalCacheClear() {
-  const confirmationMessage =
-    "Deseja realmente limpar todo o cache do aplicativo? Isso ira recarregar a pagina.";
+  const confirmationMessage = typeof I18N !== 'undefined' 
+    ? I18N.t('messages.clearCacheConfirm')
+    : "Deseja realmente limpar todo o cache do aplicativo? Isso ira recarregar a pagina.";
 
   if (!window.confirm(confirmationMessage)) {
     console.log("Limpeza manual de cache cancelada pelo usuario.");
@@ -3540,9 +3550,13 @@ function showErrorMessage(message) {
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     `;
 
+  const header = trUi("⚠️Erro de Conexão");
+  const body = trUi(message);
+  const closeLabel = trUi("Fechar");
+
   errorModal.innerHTML = `
-        <h3 style="margin-bottom: 12px; font-size: 1.4rem; color: #fff;">⚠️Erro de Conexão</h3>
-        <p style="margin-bottom: 20px; line-height: 1.5; color: rgba(255,255,255,0.9);">${message}</p>
+        <h3 style="margin-bottom: 12px; font-size: 1.4rem; color: #fff;">${header}</h3>
+        <p style="margin-bottom: 20px; line-height: 1.5; color: rgba(255,255,255,0.9);">${body}</p>
         <button onclick="this.parentElement.remove()" style="
             background: linear-gradient(135deg, #e74c3c, #c0392b);
             color: white;
@@ -3553,7 +3567,7 @@ function showErrorMessage(message) {
             font-weight: 600;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(231, 76, 60, 0.4)'" 
-           onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">Fechar</button>
+           onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none'">${closeLabel}</button>
     `;
 
   document.body.appendChild(errorModal);
@@ -4533,7 +4547,7 @@ function hideLoader() {
 }
 
 
-function updateProgress(percentage, text) {
+function updateProgress(percentage, text, params) {
   try {
     const progressFill = document.getElementById("progress-fill");
     const progressText = document.getElementById("progress-text");
@@ -4548,12 +4562,12 @@ function updateProgress(percentage, text) {
     }
 
     if (loaderText && text) {
-      loaderText.textContent = text;
+      loaderText.textContent = trUi(text, params);
     }
 
     // Log para debug mobile
     console.log(
-      `Ã°Å¸â€œÅ  Progresso: ${percentage}% - ${text || "Carregando..."}`
+      `Ã°Å¸â€œÅ  Progresso: ${percentage}% - ${trUi(text || "Carregando...", params)}`
     );
   } catch (error) {
     console.warn("Ã¢Å¡Â Ã¯Â¸Â Erro ao atualizar progresso:", error);
@@ -4607,10 +4621,10 @@ async function loadAllDeviceStatesGlobally() {
       }
 
       const progress = 20 + ((index + 1) / ALL_LIGHT_IDS.length) * 80;
-      updateProgress(
-        progress,
-        `Dispositivo ${index + 1}/${ALL_LIGHT_IDS.length}...`
-      );
+      updateProgress(progress, "Dispositivo {index}/{total}...", {
+        index: index + 1,
+        total: ALL_LIGHT_IDS.length,
+      });
     });
 
     console.log(
@@ -4671,10 +4685,10 @@ async function loadAllDeviceStatesGlobally() {
           console.log(
             `Ã°Å¸â€œÂ¡ Tentativa ${attempt}/${maxRetries} para ${url}`
           );
-          updateProgress(
-            30 + (attempt - 1) * 5,
-            `Tentativa ${attempt}/${maxRetries}...`
-          );
+          updateProgress(30 + (attempt - 1) * 5, "Tentativa {attempt}/{maxRetries}...", {
+            attempt,
+            maxRetries,
+          });
 
           // Configurar timeout por tentativa
           let controller, timeoutId;
@@ -4722,10 +4736,9 @@ async function loadAllDeviceStatesGlobally() {
           console.log(
             `Ã¢ÂÂ³ Aguardando ${delay}ms antes da prÃƒÂ³xima tentativa...`
           );
-          updateProgress(
-            30 + attempt * 5,
-            `Reagendando em ${delay / 1000}s...`
-          );
+          updateProgress(30 + attempt * 5, "Reagendando em {seconds}s...", {
+            seconds: delay / 1000,
+          });
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -4772,13 +4785,13 @@ async function loadAllDeviceStatesGlobally() {
         responseText.trim().startsWith("<html")
       ) {
         console.error(
-          "⚠️CRÃƒÂTICO: Cloudflare Functions não estÃƒÂ£o funcionando!"
+          "⚠️CRÍTICO: Cloudflare Functions não estão funcionando!"
         );
         console.error(
           "⚠️O servidor está retornando HTML em vez de executar as Functions."
         );
         console.error(
-          "⚠️Implementando fallback automÃƒÂ¡tico para API direta do Hubitat..."
+          "⚠️Implementando fallback automático para API direta do Hubitat..."
         );
 
         // FALLBACK AUTOMÃƒÂTICO: Usar API direta do Hubitat
@@ -4812,10 +4825,10 @@ async function loadAllDeviceStatesGlobally() {
 
             processedCount++;
             const progress = 60 + (processedCount / deviceEntries.length) * 35;
-            updateProgress(
-              progress,
-              `Processando ${processedCount}/${deviceEntries.length}...`
-            );
+            updateProgress(progress, "Processando {index}/{total}...", {
+              index: processedCount,
+              total: deviceEntries.length,
+            });
           });
 
           updateProgress(100, "Carregamento via API direta  concluído!");
@@ -5000,7 +5013,7 @@ async function loadAllDeviceStatesGlobally() {
       });
     }
 
-    updateProgress(95, "Finalizando sincronizaÃƒÂ§ÃƒÂ£o...");
+    updateProgress(95, "Finalizando sincronização...");
 
     // ForÃƒÂ§ar atualizaÃƒÂ§ÃƒÂ£o de todos os botÃƒÂµes master apÃƒÂ³s carregamento
     setTimeout(() => {
@@ -5038,7 +5051,7 @@ async function loadAllDeviceStatesGlobally() {
       );
     } else if (error.message.includes("Falha apÃƒÂ³s")) {
       console.warn("Ã°Å¸â€â€ž MÃƒÂºltiplas tentativas falharam");
-      updateProgress(60, "Falhas mÃƒÂºltiplas - modo backup...");
+      updateProgress(60, "Falhas múltiplas - modo backup...");
       showErrorMessage(
         "Servidor temporariamente indisponível. Usando dados salvos."
       );
@@ -5050,7 +5063,7 @@ async function loadAllDeviceStatesGlobally() {
       console.warn("Ã°Å¸â€Â¥ Erro no servidor (5xx)");
       updateProgress(60, "Erro servidor - backup...");
       showErrorMessage(
-        "Problema no servidor. Usando ÃƒÂºltimos dados conhecidos."
+        "Problema no servidor. Usando últimos dados conhecidos."
       );
     } else {
       console.warn("⚠️Erro desconhecido no carregamento:", error.message);
@@ -5064,10 +5077,10 @@ async function loadAllDeviceStatesGlobally() {
       updateDeviceUI(deviceId, storedState, true); // forceUpdate = true
 
       const progress = 60 + ((index + 1) / ALL_LIGHT_IDS.length) * 35;
-      updateProgress(
-        progress,
-        `Carregando backup ${index + 1}/${ALL_LIGHT_IDS.length}...`
-      );
+      updateProgress(progress, "Carregando backup {index}/{total}...", {
+        index: index + 1,
+        total: ALL_LIGHT_IDS.length,
+      });
     });
 
     const offlineMsg = "Carregamento  concluído (modo offline)";
@@ -6355,10 +6368,10 @@ function initSimpleMode() {
         "- progresso:",
         progress + "%"
       );
-      updateProgress(
-        progress,
-        "Carregando " + (i + 1) + "/" + ALL_LIGHT_IDS.length + "..."
-      );
+      updateProgress(progress, "Carregando {index}/{total}...", {
+        index: i + 1,
+        total: ALL_LIGHT_IDS.length,
+      });
 
       try {
         updateDeviceUI(deviceId, "off", true);
@@ -6368,7 +6381,7 @@ function initSimpleMode() {
     }
 
     console.log("Ã°Å¸â€œÂ± Configurando polling para modo simples...");
-    updateProgress(85, "Ativando sincronizaÃƒÂ§ÃƒÂ£o...");
+    updateProgress(85, "Ativando sincronização...");
 
     // Configurar observador DOM simplificado
     try {

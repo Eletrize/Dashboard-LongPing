@@ -94,6 +94,21 @@ function getEnvironmentName(envKey) {
   return envKey;
 }
 
+// Nome do ambiente na língua selecionada
+function getEnvironmentDisplayName(envKey) {
+  var name = getEnvironmentName(envKey);
+  return typeof translateText === 'function' ? translateText(name) : name;
+}
+
+// Helper to translate strings with optional placeholders
+function tr(key, params) {
+  var template = typeof translateText === 'function' ? translateText(key) : key;
+  if (!params) return template;
+  return Object.keys(params).reduce(function(acc, param) {
+    return acc.split('{' + param + '}').join(params[param]);
+  }, template);
+}
+
 function showPopup(message, onConfirm) {
   const popup = document.getElementById("confirmation-popup");
   const messageEl = document.getElementById("popup-message");
@@ -150,7 +165,7 @@ function renderEnvironmentScenes() {
 
   const environments = getVisibleEnvironmentSceneList();
   if (!environments || environments.length === 0) {
-    container.innerHTML = '<div class="scene-card-empty">Nenhum ambiente configurado.</div>';
+    container.innerHTML = '<div class="scene-card-empty">' + tr('Nenhum ambiente configurado.') + '</div>';
     return;
   }
 
@@ -165,7 +180,9 @@ function renderEnvironmentScenes() {
       const sceneConfig = env.scene || {};
       const icon = sceneConfig.icon || DEFAULT_ENV_SCENE_ICON;
       const safeKey = sanitize(env.key);
-      const safeName = sanitize(env.name || env.key);
+      const originalName = env.name || env.key;
+      const translatedName = typeof translateText === 'function' ? translateText(originalName) : originalName;
+      const safeName = sanitize(translatedName);
       const safeIcon = sanitize(icon);
       return `
         <div class="control-card large scene-control-card" id="${elementId}" data-env="${safeKey}" onclick="handleEnvironmentScene('${env.key}', '${elementId}')">
@@ -177,11 +194,15 @@ function renderEnvironmentScenes() {
     .join('');
 
   container.innerHTML = cardsHtml;
+
+  if (typeof updateTranslations === 'function') {
+    setTimeout(updateTranslations, 0);
+  }
 }
 
 function handleEnvironmentScene(envKey, elementId) {
-  const envName = getEnvironmentName(envKey);
-  const message = `Executar cenário "${envName}"? Isso irá ligar todos os dispositivos principais do ambiente.`;
+  const envName = getEnvironmentDisplayName(envKey);
+  const message = tr('Executar cenário "{envName}"? Isso irá ligar todos os dispositivos principais do ambiente.', { envName });
   showPopup(message, () => executeEnvironmentScene(envKey, elementId));
 }
 
@@ -196,7 +217,7 @@ function executeEnvironmentScene(envKey, elementId) {
   if (!commands.length) {
     console.warn(`[cenarios] Nenhum dispositivo configurado para ${envKey}`);
     if (typeof showErrorMessage === 'function') {
-      showErrorMessage('Nenhum dispositivo configurado para este ambiente.');
+      showErrorMessage(tr('Nenhum dispositivo configurado para este ambiente.'));
     }
     if (card) {
       card.classList.remove('loading');
@@ -216,7 +237,7 @@ function executeEnvironmentScene(envKey, elementId) {
     .catch((error) => {
       console.error(`❌ Erro ao executar cenário do ambiente ${envKey}`, error);
       if (typeof showErrorMessage === 'function') {
-        showErrorMessage(`Erro ao executar cenário de ${getEnvironmentName(envKey)}: ${error.message}`);
+        showErrorMessage(tr('Erro ao executar cenário de {envName}: {error}', { envName: getEnvironmentDisplayName(envKey), error: error.message }));
       }
     })
     .finally(() => {
@@ -383,8 +404,8 @@ function handleMasterLightToggle() {
 
   const message =
     action === "on"
-      ? "Você tem certeza que gostaria de ligar tudo?"
-      : "Você tem certeza que gostaria de desligar tudo?";
+      ? tr('Você tem certeza que gostaria de ligar tudo?')
+      : tr('Você tem certeza que gostaria de desligar tudo?');
 
   showPopup(message, () => executeMasterLightToggle(action));
 }
@@ -444,8 +465,8 @@ function executeMasterLightToggle(action) {
 function handleMasterCurtainToggle(action) {
   const message =
     action === "open"
-      ? "Você tem certeza que gostaria de subir todas as cortinas?"
-      : "Você tem certeza que gostaria de descer todas as cortinas?";
+      ? tr('Você tem certeza que gostaria de subir todas as cortinas?')
+      : tr('Você tem certeza que gostaria de descer todas as cortinas?');
 
   showPopup(message, () => executeMasterCurtainToggle(action));
 }
@@ -466,18 +487,15 @@ function executeMasterCurtainToggle(action) {
 
 // Funções para controlar todas as cortinas via botão virtual do Hubitat (ID 44)
 function handleMasterCurtainsOpen() {
-  showPopup("Você tem certeza que gostaria de abrir todas as cortinas?", () => {
+  showPopup(tr('Você tem certeza que gostaria de abrir todas as cortinas?'), () => {
     executeMasterCurtainsAction("open");
   });
 }
 
 function handleMasterCurtainsClose() {
-  showPopup(
-    "Você tem certeza que gostaria de fechar todas as cortinas?",
-    () => {
-      executeMasterCurtainsAction("close");
-    }
-  );
+  showPopup(tr('Você tem certeza que gostaria de fechar todas as cortinas?'), () => {
+    executeMasterCurtainsAction("close");
+  });
 }
 
 function executeMasterCurtainsAction(action) {
@@ -509,11 +527,8 @@ function executeMasterCurtainsAction(action) {
         `❌ Erro ao executar comando master curtinas ${action}:`,
         error
       );
-      showErrorMessage(
-        `Erro ao ${action === "open" ? "abrir" : "fechar"} cortinas: ${
-          error.message
-        }`
-      );
+      const errKey = action === "open" ? 'Erro ao abrir cortinas: {error}' : 'Erro ao fechar cortinas: {error}';
+      showErrorMessage(tr(errKey, { error: error.message }));
     })
     .finally(() => {
       // Remover feedback visual
@@ -527,9 +542,9 @@ function executeMasterCurtainsAction(action) {
 // Liga as luzes principais e abre cortinas para iniciar o dia
 
 function handleCenarioInicializar() {
-  const varandaName = getEnvironmentName('ambiente1');
-  const livingName = getEnvironmentName('ambiente2');
-  const message = `Executar cenário "Inicializar"? Isso irá ligar as luzes principais e abrir as cortinas de ${varandaName} e ${livingName}.`;
+  const varandaName = getEnvironmentDisplayName('ambiente1');
+  const livingName = getEnvironmentDisplayName('ambiente2');
+  const message = tr('Executar cenário "Inicializar"? Isso irá ligar as luzes principais e abrir as cortinas de {varandaName} e {livingName}.', { varandaName, livingName });
   showPopup(message, executeCenarioInicializar);
 }
 
@@ -579,7 +594,7 @@ function executeCenarioInicializar() {
     .catch((error) => {
       console.error("❌ Erro ao executar Cenário Inicializar:", error);
       if (typeof showErrorMessage === "function") {
-        showErrorMessage(`Erro ao executar cenário Inicializar: ${error.message}`);
+        showErrorMessage(tr('Erro ao executar cenário Inicializar: {error}', { error: error.message }));
       }
       if (btn) btn.classList.remove("loading");
     });
@@ -589,9 +604,9 @@ function executeCenarioInicializar() {
 // Desliga tudo da Varanda e Living (luzes, AC, receiver) e fecha cortinas
 
 function handleCenarioDormir() {
-  const varandaName = getEnvironmentName('ambiente1');
-  const livingName = getEnvironmentName('ambiente2');
-  const message = `Executar cenário "Finalização"? Isso irá desligar luzes, TV, ar condicionado, receiver e fechar as cortinas de ${varandaName} e ${livingName}.`;
+  const varandaName = getEnvironmentDisplayName('ambiente1');
+  const livingName = getEnvironmentDisplayName('ambiente2');
+  const message = tr('Executar cenário "Finalização"? Isso irá desligar luzes, TV, ar condicionado, receiver e fechar as cortinas de {varandaName} e {livingName}.', { varandaName, livingName });
   showPopup(message, executeCenarioDormir);
 }
 
@@ -660,7 +675,7 @@ function executeCenarioDormir() {
     .catch((error) => {
       console.error("❌ Erro ao executar Cenário Dormir:", error);
       if (typeof showErrorMessage === "function") {
-        showErrorMessage(`Erro ao executar cenário Dormir: ${error.message}`);
+        showErrorMessage(tr('Erro ao executar cenário Dormir: {error}', { error: error.message }));
       }
     })
     .finally(() => {

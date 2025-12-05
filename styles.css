@@ -1377,3 +1377,14 @@ html.js-ready [class*="-luzes-wrapper"] {
     height: 46px;
 }
 
+
+
+/* -
+   SELETOR DE IDIOMA (i18n)
+   - */
+.app-info-language{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px;padding-top:16px;border-top:1px solid #ffffff1a}.app-info-language__label{color:#ffffff8c;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em}.app-info-language__options{display:flex;gap:8px}.app-info-language__btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 16px;background:rgba(255,255,255,0.08);border:1px solid #ffffff26;border-radius:12px;cursor:pointer;transition:all 0.2s;min-width:60px}.app-info-language__btn:hover{background:rgba(255,255,255,0.15);border-color:#ffffff40;transform:translateY(-2px)}.app-info-language__btn:active{transform:scale(0.95)}.app-info-language__btn.active{background:rgba(0,135,57,0.5);border-color:#00873980;box-shadow:0 0 12px rgba(0,135,57,0.3)}.app-info-language__flag{font-size:24px;line-height:1}.app-info-language__name{color:#fff;font-size:11px;font-weight:600;letter-spacing:0.05em}
+
+/* 
+   SELETOR DE IDIOMA (i18n)
+    */
+.app-info-language{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px;padding-top:16px;border-top:1px solid #ffffff1a}.app-info-language__label{color:#ffffff8c;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em}.app-info-language__options{display:flex;gap:8px}.app-info-language__btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 16px;background:rgba(255,255,255,0.08);border:1px solid #ffffff26;border-radius:12px;cursor:pointer;transition:all 0.2s;min-width:60px}.app-info-language__btn:hover{background:rgba(255,255,255,0.15);border-color:#ffffff40;transform:translateY(-2px)}.app-info-language__btn:active{transform:scale(0.95)}.app-info-language__btn.active{background:rgba(0,135,57,0.5);border-color:#00873980;box-shadow:0 0 12px rgba(0,135,57,0.3)}.app-info-language__flag{font-size:24px;line-height:1}.app-info-language__name{color:#fff;font-size:11px;font-weight:600;letter-spacing:0.05em}
