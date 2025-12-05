@@ -80,6 +80,12 @@ const LIVING_AC = getLivingAcId();
 const RECEIVER = getReceiverId();
 
 const DEFAULT_ENV_SCENE_ICON = "icon-scenes.svg";
+const sceneToggleState = {};
+
+// exposed getter for other pages to sync toggle state
+function getSceneToggleState(envKey) {
+  return Boolean(sceneToggleState[envKey]);
+}
 
 let masterConfirmCallback = null;
 
@@ -122,8 +128,10 @@ function showPopup(message, onConfirm) {
   popup.style.display = "flex";
 
   confirmBtn.onclick = () => {
-    if (typeof masterConfirmCallback === "function") {
-      masterConfirmCallback();
+    const fn = masterConfirmCallback;
+    hidePopup();
+    if (typeof fn === "function") {
+      fn();
     }
   };
   cancelBtn.onclick = hidePopup;
@@ -184,16 +192,29 @@ function renderEnvironmentScenes() {
       const translatedName = typeof translateText === 'function' ? translateText(originalName) : originalName;
       const safeName = sanitize(translatedName);
       const safeIcon = sanitize(icon);
+      sceneToggleState[env.key] = sceneToggleState[env.key] || false;
+
       return `
-        <div class="control-card large scene-control-card" id="${elementId}" data-env="${safeKey}" onclick="handleEnvironmentScene('${env.key}', '${elementId}')">
-          <img class="control-icon" src="images/icons/${safeIcon}" alt="${safeName}">
-          <div class="control-label">${safeName}</div>
+        <div class="control-card large scene-control-card scene-toggle-card" id="${elementId}" data-env="${safeKey}" data-state="off">
+          <div class="scene-toggle-card__top">
+            <img class="control-icon" src="images/icons/${safeIcon}" alt="${safeName}">
+            <div class="scene-toggle-card__info">
+              <div class="control-label">${safeName}
+              </div>
+            </div>
+          </div>
+          <button type="button" class="scene-toggle" aria-label="${tr('Alternar cenário de {envName}', { envName: safeName })}" data-env="${safeKey}" onclick="handleSceneToggle('${env.key}', '${elementId}')">
+            <span class="scene-toggle__track"></span>
+            <span class="scene-toggle__knob"></span>
+          </button>
         </div>
       `;
     })
     .join('');
 
   container.innerHTML = cardsHtml;
+
+  environments.forEach((env) => setSceneToggleState(env.key, sceneToggleState[env.key] || false));
 
   if (typeof updateTranslations === 'function') {
     setTimeout(updateTranslations, 0);
@@ -204,6 +225,69 @@ function handleEnvironmentScene(envKey, elementId) {
   const envName = getEnvironmentDisplayName(envKey);
   const message = tr('Executar cenário "{envName}"? Isso irá ligar todos os dispositivos principais do ambiente.', { envName });
   showPopup(message, () => executeEnvironmentScene(envKey, elementId));
+}
+
+function handleSceneToggle(envKey, elementId) {
+  const currentState = Boolean(sceneToggleState[envKey]);
+  const nextState = !currentState;
+  const envName = getEnvironmentDisplayName(envKey);
+  const message = nextState
+    ? tr('Ligar cenário "{envName}"? Isso irá ligar os principais dispositivos do ambiente.', { envName })
+    : tr('Desligar cenário "{envName}"? Isso irá desligar os principais dispositivos do ambiente.', { envName });
+
+  showPopup(message, () => confirmSceneToggle(envKey, elementId, nextState));
+}
+
+function confirmSceneToggle(envKey, elementId, targetState) {
+  const card = elementId ? document.getElementById(elementId) : null;
+  if (card) {
+    card.classList.add('scene-card--pending');
+  }
+
+  const runner = targetState
+    ? executeEnvironmentScene(envKey, elementId)
+    : executeEnvironmentSceneOff(envKey, elementId);
+
+  return Promise.resolve(runner)
+    .then(() => {
+      setSceneToggleState(envKey, targetState);
+      if (card) {
+        card.classList.add('scene-card--animating');
+        setTimeout(() => card.classList.remove('scene-card--animating'), 600);
+      }
+    })
+    .catch((error) => {
+      console.error('[cenarios] Falha ao alternar cenário', error);
+    })
+    .finally(() => {
+      if (card) {
+        card.classList.remove('scene-card--pending');
+      }
+    });
+}
+
+function setSceneToggleState(envKey, isOn) {
+  sceneToggleState[envKey] = Boolean(isOn);
+  const card = document.querySelector(`.scene-toggle-card[data-env="${envKey}"]`);
+  const toggle = card ? card.querySelector('.scene-toggle') : null;
+
+  if (card) {
+    card.dataset.state = isOn ? 'on' : 'off';
+    card.classList.toggle('is-on', isOn);
+  }
+
+  if (toggle) {
+    toggle.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  }
+
+  try {
+    const evt = new CustomEvent('sceneToggleStateChanged', {
+      detail: { envKey, isOn: Boolean(isOn) },
+    });
+    window.dispatchEvent(evt);
+  } catch (err) {
+    console.warn('[scene] não foi possível despachar evento de sync', err);
+  }
 }
 
 function executeEnvironmentScene(envKey, elementId) {
@@ -226,19 +310,61 @@ function executeEnvironmentScene(envKey, elementId) {
     return;
   }
 
-  executeCommandsSequentially(commands, 150)
+  return executeCommandsSequentially(commands, 150)
     .then(() => {
       console.log(`✅ Cenário do ambiente ${envKey} executado com ${commands.length} comandos`);
       if (typeof syncAllVisibleControls === 'function') {
         syncAllVisibleControls(true);
       }
       hidePopup();
+      setSceneToggleState(envKey, true);
     })
     .catch((error) => {
       console.error(`❌ Erro ao executar cenário do ambiente ${envKey}`, error);
       if (typeof showErrorMessage === 'function') {
         showErrorMessage(tr('Erro ao executar cenário de {envName}: {error}', { envName: getEnvironmentDisplayName(envKey), error: error.message }));
       }
+      throw error;
+    })
+    .finally(() => {
+      if (card) {
+        card.classList.remove('loading');
+      }
+    });
+}
+
+function executeEnvironmentSceneOff(envKey, elementId) {
+  const commands = collectEnvironmentSceneOffCommands(envKey);
+  const card = elementId ? document.getElementById(elementId) : null;
+
+  if (card) {
+    card.classList.add('loading');
+  }
+
+  if (!commands.length) {
+    console.warn(`[cenarios] Nenhum dispositivo configurado para desligar em ${envKey}`);
+    hidePopup();
+    if (card) {
+      card.classList.remove('loading');
+    }
+    return Promise.resolve();
+  }
+
+  return executeCommandsSequentially(commands, 150)
+    .then(() => {
+      console.log(`✅ Cenário (OFF) do ambiente ${envKey} executado com ${commands.length} comandos`);
+      if (typeof syncAllVisibleControls === 'function') {
+        syncAllVisibleControls(true);
+      }
+      hidePopup();
+      setSceneToggleState(envKey, false);
+    })
+    .catch((error) => {
+      console.error(`❌ Erro ao desligar cenário do ambiente ${envKey}`, error);
+      if (typeof showErrorMessage === 'function') {
+        showErrorMessage(tr('Erro ao desligar cenário de {envName}: {error}', { envName: getEnvironmentDisplayName(envKey), error: error.message }));
+      }
+      throw error;
     })
     .finally(() => {
       if (card) {
@@ -307,6 +433,86 @@ function collectEnvironmentSceneCommands(envKey) {
   const playbackPower = env.mediaControl?.playback?.powerDevices;
   if (Array.isArray(playbackPower)) {
     playbackPower.forEach((deviceId) => add(deviceId, 'on', 'Playback'));
+  }
+
+  const deduped = [];
+  const seen = new Set();
+
+  commands.forEach((entry) => {
+    if (entry.macro) {
+      deduped.push(entry);
+      return;
+    }
+    const key = `${entry.deviceId}:${entry.command}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(entry);
+    }
+  });
+
+  return deduped;
+}
+
+function collectEnvironmentSceneOffCommands(envKey) {
+  if (typeof CLIENT_CONFIG === 'undefined' || !CLIENT_CONFIG.environments?.[envKey]) {
+    return [];
+  }
+
+  const env = CLIENT_CONFIG.environments[envKey];
+  const commands = [];
+
+  const add = (deviceId, command, label) => addCommandIfValid(commands, deviceId, command, label);
+
+  (env.lights || []).forEach((light) => add(light.id, 'off', `Luz ${light.name || ''}`));
+  (env.curtains || []).forEach((curtain) => add(curtain.id, 'close', `Cortina ${curtain.name || ''}`));
+
+  if (env.airConditioner?.zones) {
+    env.airConditioner.zones.forEach((zone) => add(zone.deviceId, 'off', `AC ${zone.name || ''}`));
+  }
+
+  if (env.tv?.deviceId) {
+    if (env.tv.hasMacro && env.tv.macroName) {
+      commands.push({ macro: `${env.tv.macroName}TvOff` });
+    } else {
+      add(env.tv.deviceId, 'off', 'TV');
+    }
+  }
+
+  if (env.htv?.deviceId) {
+    if (env.htv.hasMacro && env.htv.macroName) {
+      commands.push({ macro: `${env.htv.macroName}HtvOff` });
+    } else {
+      add(env.htv.deviceId, 'off', 'HTV');
+    }
+  }
+
+  if (env.telao?.deviceId) {
+    add(env.telao.deviceId, 'off', 'Telão');
+  }
+
+  if (env.audio?.receiverId) {
+    add(env.audio.receiverId, 'off', 'Áudio');
+  }
+
+  if (env.pool) {
+    Object.values(env.pool).forEach((item) => {
+      if (item && item.id) {
+        add(item.id, 'off', `Piscina ${item.name || ''}`);
+      }
+    });
+  }
+
+  const mediaGroups = ['projectors', 'televisions', 'computers'];
+  mediaGroups.forEach((group) => {
+    const devices = env.mediaControl?.[group];
+    if (Array.isArray(devices)) {
+      devices.forEach((device) => add(device.id, 'off', `${group} ${device?.name || ''}`));
+    }
+  });
+
+  const playbackPower = env.mediaControl?.playback?.powerDevices;
+  if (Array.isArray(playbackPower)) {
+    playbackPower.forEach((deviceId) => add(deviceId, 'off', 'Playback'));
   }
 
   const deduped = [];

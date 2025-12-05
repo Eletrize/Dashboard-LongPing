@@ -697,6 +697,128 @@
         return scenesScriptPromise;
       }
 
+      function invokeSceneToggle(envKey, elementId) {
+        ensureScenesScript()
+          .then(() => {
+            if (typeof handleSceneToggle === 'function') {
+              handleSceneToggle(envKey, elementId);
+            } else if (typeof handleEnvironmentScene === 'function') {
+              handleEnvironmentScene(envKey, elementId);
+            } else {
+              console.warn('[scene] Nenhum handler de cena disponível');
+            }
+          })
+          .catch((error) => console.error('Erro ao carregar scenes.js', error));
+      }
+
+      function syncPresentationToggleFromScenes(envKey) {
+        ensureScenesScript()
+          .then(() => {
+            if (typeof getSceneToggleState !== 'function') return;
+            const isOn = getSceneToggleState(envKey);
+            updatePresentationCardState(envKey, isOn);
+          })
+          .catch((error) => console.error('Erro ao sincronizar cenário', error));
+      }
+
+      function updatePresentationCardState(envKey, isOn) {
+        const card = document.querySelector(`.scene-toggle-card[data-env="${envKey}"]`);
+        if (!card) return;
+        card.dataset.state = isOn ? 'on' : 'off';
+        card.classList.toggle('is-on', isOn);
+        const toggle = card.querySelector('.scene-toggle');
+        if (toggle) toggle.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+      }
+
+      window.addEventListener('sceneToggleStateChanged', (evt) => {
+        if (!evt || !evt.detail) return;
+        const { envKey, isOn } = evt.detail;
+        updatePresentationCardState(envKey, isOn);
+      });
+
+      // ────────────────────────────────────────────────
+      // Long press (1s) para ligar/desligar todas as luzes do ambiente
+      // ────────────────────────────────────────────────
+      const lightHoldTimers = {};
+      const lightHoldTriggered = {};
+
+      function clearLightHold(envKey) {
+        if (lightHoldTimers[envKey]) {
+          clearTimeout(lightHoldTimers[envKey]);
+          delete lightHoldTimers[envKey];
+        }
+        delete lightHoldTriggered[envKey];
+      }
+
+      function handleLightsPressStart(envKey) {
+        clearLightHold(envKey);
+        lightHoldTimers[envKey] = setTimeout(() => {
+          lightHoldTriggered[envKey] = true;
+          showLightsMasterPopup(envKey);
+        }, 1000);
+      }
+
+      function handleLightsPressEnd(envKey) {
+        clearLightHold(envKey);
+      }
+
+      function handleLightsCardClick(event, envKey, route) {
+        if (lightHoldTriggered[envKey]) {
+          event.preventDefault();
+          clearLightHold(envKey);
+          return;
+        }
+        spaNavigate(`${envKey}-${route}`);
+      }
+
+      function getEnvLightIds(envKey) {
+        if (typeof getEnvironmentLightIds === 'function') {
+          return getEnvironmentLightIds(envKey) || [];
+        }
+        if (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.environments?.[envKey]?.lights) {
+          return CLIENT_CONFIG.environments[envKey].lights.map((l) => l.id).filter(Boolean);
+        }
+        return [];
+      }
+
+      function anyLightOn(envKey) {
+        const ids = getEnvLightIds(envKey);
+        if (!ids.length || typeof getStoredState !== 'function') return false;
+        return ids.some((id) => getStoredState(id) === 'on');
+      }
+
+      function showLightsMasterPopup(envKey) {
+        const hasOn = anyLightOn(envKey);
+        const msg = hasOn
+          ? (typeof translateText === 'function' ? translateText('Desligar todas as luzes do ambiente?') : 'Desligar todas as luzes do ambiente?')
+          : (typeof translateText === 'function' ? translateText('Ligar todas as luzes do ambiente?') : 'Ligar todas as luzes do ambiente?');
+
+        const command = hasOn ? 'off' : 'on';
+        if (typeof showPopup === 'function') {
+          showPopup(msg, () => executeLightsMasterCommand(envKey, command));
+        }
+      }
+
+      function executeLightsMasterCommand(envKey, command) {
+        const ids = getEnvLightIds(envKey);
+        if (!ids.length || typeof sendHubitatCommand !== 'function') {
+          console.warn('[lights-master] Nenhuma luz encontrada ou sendHubitatCommand indisponível');
+          return;
+        }
+        ids.forEach((id) => {
+          sendHubitatCommand(id, command)
+            .then(() => {
+              if (typeof setStoredState === 'function') {
+                setStoredState(id, command);
+              }
+            })
+            .catch((err) => console.error('[lights-master] Falha ao enviar comando', id, err));
+        });
+        if (typeof syncAllVisibleControls === 'function') {
+          setTimeout(() => syncAllVisibleControls(true), 200);
+        }
+      }
+
       // ═══════════════════════════════════════════════════════════════════════════
       // GERADOR DE BOTÕES DE FEATURES (lê do config.js)
       // ═══════════════════════════════════════════════════════════════════════════
@@ -794,8 +916,25 @@
           return '<!-- nenhuma feature habilitada -->';
         }
 
-        const hasManualMidiaButton = features.some((feature) => feature.route === 'midia');
-        const mediaTargets = getMediaFeatures(envKey, features);
+        // Normalize cenário feature: rename to "Apresentação", set icon, and keep action
+        const updatedFeatures = features.map((feature) => {
+          if (feature.action === 'executeScene') {
+            return {
+              ...feature,
+              label: 'Apresentação',
+              icon: 'icon-apresentacao.svg'
+            };
+          }
+          return feature;
+        });
+
+        // Move cenário (Apresentação) to the first position, preserving others order
+        const sceneFeatures = updatedFeatures.filter((f) => f.action === 'executeScene');
+        const nonSceneFeatures = updatedFeatures.filter((f) => f.action !== 'executeScene');
+        const orderedFeatures = sceneFeatures.concat(nonSceneFeatures);
+
+        const hasManualMidiaButton = orderedFeatures.some((feature) => feature.route === 'midia');
+        const mediaTargets = getMediaFeatures(envKey, orderedFeatures);
         const mediaCardSettings = getMediaCardSettings(envKey);
 
         if (mediaTargets.length && !hasManualMidiaButton) {
@@ -805,22 +944,32 @@
             icon: mediaCardSettings.icon || 'icon-midia.svg',
             route: 'midia'
           };
-          const insertionIndex = Math.min(1, features.length);
-          features.splice(insertionIndex, 0, mediaCard);
+          const insertionIndex = Math.min(1, orderedFeatures.length);
+          orderedFeatures.splice(insertionIndex, 0, mediaCard);
         }
 
-        const isFullWidth = features.length === 1;
+        const isFullWidth = orderedFeatures.length === 1;
 
-        return features.map(feature => {
+        return orderedFeatures.map(feature => {
           const cardClass = isFullWidth ? 'control-card control-card--full-width' : 'control-card';
+          const isLightsFeature = feature.route === 'luzes';
+          const lightIds = isLightsFeature ? (getEnvLightIds(envKey) || []) : [];
           
           if (feature.action === 'executeScene') {
              const btnId = `scene-btn-${envKey}`;
              const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
              return `
-            <div class="${cardClass}" id="${btnId}" onclick="handleEnvironmentScene('${envKey}', '${btnId}')">
-              <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
-              <div class="control-label">${label}</div>
+            <div class="${cardClass} scene-toggle-card" id="${btnId}" data-env="${envKey}" data-state="off">
+              <div class="scene-toggle-card__top">
+                <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
+                <div class="scene-toggle-card__info">
+                  <div class="control-label">${label}</div>
+                </div>
+              </div>
+              <button type="button" class="scene-toggle" aria-label="${label}" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}')">
+                <span class="scene-toggle__track"></span>
+                <span class="scene-toggle__knob"></span>
+              </button>
             </div>
           `;
           }
@@ -857,8 +1006,18 @@
           }
 
           const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
+          const lightEvents = isLightsFeature
+            ? `
+                onpointerdown="handleLightsPressStart('${envKey}')"
+                onpointerup="handleLightsPressEnd('${envKey}')"
+                onpointerleave="handleLightsPressEnd('${envKey}')"
+                onclick="handleLightsCardClick(event, '${envKey}', '${feature.route}')"
+              `
+            : `onclick="spaNavigate('${envKey}-${feature.route}')"`;
+
           return `
-            <div class="${cardClass}" onclick="spaNavigate('${envKey}-${feature.route}')">
+            <div class="${cardClass} ${isLightsFeature ? 'lights-feature' : ''}" ${lightEvents}
+              data-env="${envKey}" data-feature="${feature.route}" data-device-ids="${lightIds.join(',')}" data-state="off">
               <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
               <div class="control-label">${label}</div>
             </div>
@@ -973,7 +1132,17 @@
           return;
         }
 
+        updatePlaybackTransportUI(envKey, command);
+
         dispatchMediaCommands([deviceId], command);
+      }
+
+      function updatePlaybackTransportUI(envKey, activeCommand) {
+        const selector = `.media-playback-transport button[data-env="${envKey}"][data-transport]`;
+        document.querySelectorAll(selector).forEach((btn) => {
+          const isActive = activeCommand && btn.getAttribute('data-transport') === activeCommand;
+          btn.classList.toggle('is-active', Boolean(isActive));
+        });
       }
 
       function handlePlaybackVolumeInput(rangeEl) {
@@ -1022,6 +1191,9 @@
           button.disabled = !isOn;
           console.log(`[playback] Transport button disabled=${button.disabled}`);
         });
+        if (!isOn) {
+          updatePlaybackTransportUI(envKey, null);
+        }
 
         const muteBtn = document.querySelector(`.media-playback-mute-btn[data-env="${envKey}"]`);
         if (muteBtn) {
@@ -1298,7 +1470,7 @@
         const transportAvailableAttr = 'true';
         const sliderWrapperDisabledClass = !isPowerOn ? ' is-disabled' : '';
 
-        const audioTitle = typeof translateText === 'function' ? translateText('Áudio') : 'Áudio';
+        const audioTitle = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
         const connectedLabel = typeof translateText === 'function'
           ? translateText(isPowerOn ? 'Conectado' : 'Conectado')
           : 'Conectado';
@@ -1313,28 +1485,25 @@
             <header class="media-panel__section-header">
               <div class="media-panel__section-headline">
                 <div class="media-panel__section-summary">
-                  <img src="images/icons/icon-musica.svg" alt="Áudio" class="media-panel__section-icon">
+                  <img src="images/icons/icon-apresentacao.svg" alt="${audioTitle}" class="media-panel__section-icon">
                   <div class="media-panel__section-title">
                     <h2>${audioTitle}</h2>
                     <p>1 ${connectedLabel}</p>
                   </div>
                 </div>
-                <button type="button" class="media-panel__section-toggle" data-section="${sectionId}" aria-expanded="false" onclick="toggleMediaSection('${sectionId}')">
-                  <img src="images/icons/arrow-down.svg" alt="Expandir">
-                </button>
               </div>
               <div class="media-panel__actions media-panel__actions--stacked">
                 <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on')">${onLabel}</button>
                 <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off')">${offLabel}</button>
               </div>
             </header>
-            <div class="media-panel__body" data-section="${sectionId}">
+            <div class="media-panel__body is-open" data-section="${sectionId}">
               <div class="media-playback-controls">
                 <div class="media-playback-transport">
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play')" aria-label="${playLabel}"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport="play" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play')" aria-label="${playLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-play.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause')" aria-label="${pauseLabel}"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport="pause" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause')" aria-label="${pauseLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-pause.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
                 </div>
@@ -1357,21 +1526,34 @@
         const envName = getTranslatedEnvName(envKey, envKey);
         const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
         const description = controlConfig?.description ? `<p class="media-panel__description">${escapeHtml(controlConfig.description)}</p>` : '';
-        const projectorSection = renderMediaDeviceSection(envKey, 'projectors', {
-          title: typeof translateText === 'function' ? translateText('Projetores') : 'Projetores',
-          icon: 'icon-projetor.svg',
-          subtitle: '',
-          devices: Array.isArray(controlConfig?.projectors) ? controlConfig.projectors : []
-        });
 
-        const tvSection = renderMediaDeviceSection(envKey, 'televisions', {
-          title: typeof translateText === 'function' ? translateText('Televisores') : 'Televisores',
-          icon: 'icon-tv.svg',
-          subtitle: '',
-          devices: Array.isArray(controlConfig?.televisions) ? controlConfig.televisions : []
-        });
+        const projectorDevices = Array.isArray(controlConfig?.projectors)
+          ? controlConfig.projectors.filter(Boolean)
+          : [];
+        const projectorSection = projectorDevices.length
+          ? renderMediaDeviceSection(envKey, 'projectors', {
+              title: typeof translateText === 'function' ? translateText('Projetores') : 'Projetores',
+              icon: 'icon-projetor.svg',
+              subtitle: '',
+              devices: projectorDevices
+            })
+          : '';
 
-        const computerDevices = Array.isArray(controlConfig?.computers) ? controlConfig.computers : [];
+        const tvDevices = Array.isArray(controlConfig?.televisions)
+          ? controlConfig.televisions.filter(Boolean)
+          : [];
+        const tvSection = tvDevices.length
+          ? renderMediaDeviceSection(envKey, 'televisions', {
+              title: typeof translateText === 'function' ? translateText('Televisores') : 'Televisores',
+              icon: 'icon-tv.svg',
+              subtitle: '',
+              devices: tvDevices
+            })
+          : '';
+
+        const computerDevices = Array.isArray(controlConfig?.computers)
+          ? controlConfig.computers.filter(Boolean)
+          : [];
         const computerSection = computerDevices.length
           ? renderMediaDeviceSection(envKey, 'computers', {
               title: typeof translateText === 'function' ? translateText('Computadores') : 'Computadores',

@@ -2120,6 +2120,17 @@ function initRoomPage() {
   pruneStaleEntries();
   syncAllVisibleControls(true);
 
+  // Sincronizar estado inicial do toggle "Apresentação" com o cenário correspondente
+  try {
+    const route = (window.location.hash || "").replace("#", "");
+    const envKey = route ? route.split("-")[0] : "";
+    if (envKey && typeof syncPresentationToggleFromScenes === "function") {
+      syncPresentationToggleFromScenes(envKey);
+    }
+  } catch (e) {
+    console.warn('Não foi possível sincronizar toggle de apresentação:', e);
+  }
+
   // Rename label on Sinuca page: Iluminacao -> Bar (UI-only)
   try {
     const route = (window.location.hash || "").replace("#", "");
@@ -5207,6 +5218,55 @@ function setupDomObserver() {
   }
 }
 
+function collectLightFeatureIds(card) {
+  if (!card || !card.dataset) return [];
+  let ids = (card.dataset.deviceIds || "")
+    .split(",")
+    .map(function (id) {
+      return id.trim();
+    })
+    .filter(Boolean);
+
+  const envKey = card.dataset.env;
+  if ((!ids || ids.length === 0) && typeof getEnvironmentLightIds === "function" && envKey) {
+    ids = getEnvironmentLightIds(envKey) || [];
+    card.dataset.deviceIds = ids.join(",");
+  }
+
+  return ids;
+}
+
+function setLightFeatureIcon(card, state) {
+  if (!card || !card.dataset) return;
+  const img = card.querySelector("img");
+  if (!img) return;
+
+  const nextIcon = state === "on"
+    ? "images/icons/icon-small-light-on.svg"
+    : "images/icons/icon-small-light-off.svg";
+
+  if (!img.src || !img.src.includes(nextIcon.split("/").pop())) {
+    img.src = nextIcon;
+  }
+
+  card.dataset.state = state;
+}
+
+function updateLightFeatureIcons(forceUpdate = false) {
+  const cards = document.querySelectorAll(".lights-feature[data-env]");
+  if (!cards || cards.length === 0) return;
+
+  cards.forEach(function (card) {
+    const ids = collectLightFeatureIds(card);
+    if (!ids || ids.length === 0) return;
+
+    const state = anyOn(ids) ? "on" : "off";
+    if (forceUpdate || card.dataset.state !== state) {
+      setLightFeatureIcon(card, state);
+    }
+  });
+}
+
 // Sincronizar todos os controles visÃƒÂ­veis com estados salvos
 function syncAllVisibleControls(forceMasterUpdate = false) {
   pruneStaleEntries();
@@ -5269,6 +5329,8 @@ function syncAllVisibleControls(forceMasterUpdate = false) {
     const masterState = anyOn(ids) ? "on" : "off";
     setMasterIcon(btn, masterState, forceMasterUpdate);
   });
+
+  updateLightFeatureIcons(forceMasterUpdate);
 
   debugLog(() => ["syncAllVisibleControls:updated", updatedControls]);
 }

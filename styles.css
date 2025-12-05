@@ -84,6 +84,107 @@ html,html{height:100dvh;overflow:hidden}body{touch-action:manipulation;-webkit-u
     height: auto;
 }
 
+/* Scene toggle card */
+.scene-toggle-card {
+    cursor: default;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 36px 48px;
+    gap: 14px;
+    flex-direction: row;
+}
+
+.scene-toggle-card__top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.scene-toggle-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.scene-toggle-card .control-label {
+    font-size: 24px;
+}
+
+.scene-toggle-card .control-icon {
+    width: 80px;
+    height: 80px;
+}
+
+.scene-toggle {
+    --toggle-width: 64px;
+    --toggle-height: 32px;
+    --toggle-padding: 4px;
+    --toggle-bg-off: #ffffff1f;
+    --toggle-bg-on: #4caf50cc;
+    --toggle-knob-size: 24px;
+    --toggle-radius: 12px;
+    appearance: none;
+    border: 1px solid #ffffff33;
+    border-radius: var(--toggle-radius);
+    background: var(--toggle-bg-off);
+    width: var(--toggle-width);
+    height: var(--toggle-height);
+    padding: var(--toggle-padding);
+    position: relative;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease;
+    display: inline-block;
+    vertical-align: middle;
+    align-self: center;
+    margin-left: auto;
+}
+
+.scene-toggle__track {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--toggle-radius);
+    background: transparent;
+    pointer-events: none;
+}
+
+.scene-toggle__knob {
+    position: absolute;
+    top: 50%;
+    left: var(--toggle-padding);
+    transform: translate(0, -50%);
+    width: var(--toggle-knob-size);
+    height: var(--toggle-knob-size);
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 6px #00000040;
+    transition: transform .22s ease, box-shadow .2s ease;
+}
+
+.scene-toggle-card.is-on .scene-toggle {
+    background: var(--toggle-bg-on);
+    border-color: #4caf5080;
+}
+
+.scene-toggle-card.is-on .scene-toggle__knob {
+    transform: translate(calc(var(--toggle-width) - var(--toggle-knob-size) - (var(--toggle-padding) * 2)), -50%);
+}
+
+.scene-toggle-card[data-state="off"] .scene-toggle__knob {
+    transform: translate(0, -50%);
+}
+
+.scene-card--pending {
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.scene-card--animating .scene-toggle__knob {
+    box-shadow: 0 0 0 6px #4caf5033;
+}
+
 /* AC Mode Grid Single Column */
 .ac-modes-grid--single {
     grid-template-columns: 1fr !important;
