@@ -224,13 +224,9 @@ const CLIENT_CONFIG = {
             },
             // IDs das luzes deste ambiente (para controle individual e master)
             lights: [
-                { id: "44", name: "Luz 1" },
-                { id: "95", name: "Luz 2" },
-                { id: "96", name: "Luz 3" },
-                { id: "41", name: "Luz 4" },
-                { id: "45", name: "Luz 5" },
-                { id: "40", name: "Luz 6" },
-                { id: "31", name: "Luz 7" }
+                { id: "52", name: "Spots Focal" },
+                { id: "58", name: "Spots" },
+                { id: "67", name: "Sanca Central" }
             ],
             // Cortinas/Persianas
             curtains: [
@@ -289,13 +285,7 @@ const CLIENT_CONFIG = {
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
             },
             lights: [
-                { id: "57", name: "Luz 1" },
-                { id: "61", name: "Luz 2" },
-                { id: "75", name: "Luz 3" },
-                { id: "76", name: "Luz 4" },
-                { id: "49", name: "Luz 5" },
-                { id: "58", name: "Luz 6" },
-                { id: "20", name: "Luz 7" }
+                { id: "62", name: "Spots" }
             ],
             curtains: [
                 { id: "50", name: "Cortina 1", type: "cortina" },
@@ -373,12 +363,7 @@ const CLIENT_CONFIG = {
                     volumeLabel: "Volume geral"
                 }
             },
-            lights: [
-                { id: "35", name: "Luz 1" },
-                { id: "36", name: "Luz 2" },
-                { id: "37", name: "Luz 3" },
-                { id: "42", name: "Luz 4" }
-            ],
+
             curtains: [],
             airConditioner: null,
             tv: null,
@@ -440,12 +425,7 @@ const CLIENT_CONFIG = {
                 }
             },
             lights: [
-                { id: "70", name: "Luz 1" },
-                { id: "66", name: "Luz 2" },
-                { id: "59", name: "Luz 3" },
-                { id: "65", name: "Luz 4" },
-                { id: "77", name: "Luz 5" },
-                { id: "37", name: "Luz 6" }
+                { id: "60", name: "Spots" }
             ],
             curtains: [],
             airConditioner: null,
@@ -481,7 +461,8 @@ const CLIENT_CONFIG = {
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
             },
             lights: [
-                { id: "38", name: "Luz 1" }
+                { id: "64", name: "Led Parede" },
+                { id: "61", name: "Spots" }
             ],
             curtains: [],
             airConditioner: null,
@@ -541,8 +522,8 @@ const CLIENT_CONFIG = {
                 }
             },
             lights: [
-                { id: "81", name: "Luz 1" },
-                { id: "82", name: "Luz 2" }
+                { id: "40", name: "Spots" },
+                { id: "44", name: "Spots TV" }
             ],
             curtains: [],
             airConditioner: {
@@ -577,8 +558,11 @@ const CLIENT_CONFIG = {
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
             },
             lights: [
-                { id: "270", name: "Luz 1" },
-                { id: "271", name: "Luz 2" }
+                { id: "45", name: "Led Prateleira" },
+                { id: "43", name: "Spots" },
+                { id: "57", name: "Led" },
+                { id: "63", name: "Led" },
+                { id: "59", name: "Spots Prateleira" },
             ],
             curtains: [
                 { id: "192", name: "Veneziana 1", type: "veneziana" },
@@ -647,8 +631,10 @@ const CLIENT_CONFIG = {
                 }
             },
             lights: [
-                { id: "272", name: "Luz 1" },
-                { id: "273", name: "Luz 2" }
+                { id: "42", name: "Led Nicho" },
+                { id: "41", name: "Spots" },
+                { id: "65", name: "Sanca" },
+                { id: "66", name: "Trilho" }
             ],
             curtains: [
                 { id: "194", name: "Veneziana", type: "veneziana" }
