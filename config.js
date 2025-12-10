@@ -228,16 +228,10 @@ const CLIENT_CONFIG = {
                 { id: "58", name: "Spots" },
                 { id: "67", name: "Sanca Central" }
             ],
-            // Cortinas/Persianas
-            curtains: [
-                { id: "109", name: "Cortina 1", type: "cortina" },
-                { id: "115", name: "Cortina 2", type: "cortina" },
-                { id: "116", name: "Cortina 3", type: "cortina" }
-            ],
             // Ar-condicionado
             airConditioner: {
                 zones: [
-                    { id: "varanda", name: "Varanda", deviceId: "110" }
+                    { id: "varanda", name: "Varanda", deviceId: "103" }
                 ]
             },
             // TV
@@ -295,7 +289,8 @@ const CLIENT_CONFIG = {
             ],
             airConditioner: {
                 zones: [
-                    { id: "living", name: "Living", deviceId: "167" }
+                    { id: "Circulacao", name: "Circulacao", deviceId: "104" },
+                    { id: "circulacao2  ", name: "Circulacao2", deviceId: "106" }
                 ]
             },
             tv: {
@@ -345,12 +340,12 @@ const CLIENT_CONFIG = {
             // └─────────────────────────────────────────────────────────────────┘
             mediaControl: {
                 projectors: [
-                    { id: "", name: "Projetor 1" },
-                    { id: "", name: "Projetor 2" },
-                    { id: "", name: "Projetor 3" },
-                    { id: "", name: "Projetor 4" },
-                    { id: "", name: "Projetor 5" },
-                    { id: "", name: "Projetor 6" }
+                    { id: "110", name: "Projetor 1" },
+                    { id: "111", name: "Projetor 2" },
+                    { id: "112", name: "Projetor 3" },
+                    { id: "113", name: "Projetor 4" },
+                    { id: "114", name: "Projetor 5" },
+                    { id: "115", name: "Projetor 6" }
                 ],
                 televisions: [],
                 computers: [
@@ -412,7 +407,7 @@ const CLIENT_CONFIG = {
             mediaControl: {
                 projectors: [],
                 televisions: [
-                    { id: "157", name: "Televisão 1", description: "Smart TV principal" }
+                    { id: "121", name: "Televisão 1", description: "Smart TV principal" }
                 ],
                 computers: [
                     { id: "", name: "Computador" }
@@ -428,7 +423,11 @@ const CLIENT_CONFIG = {
                 { id: "60", name: "Spots" }
             ],
             curtains: [],
-            airConditioner: null,
+            airConditioner: {
+                zones: [
+                    { id: "pesquisa", name: "Pesquisa", deviceId: "105" }
+                ]
+            },
             tv: null,
             htv: null,
             audio: null,
@@ -501,15 +500,15 @@ const CLIENT_CONFIG = {
             // └─────────────────────────────────────────────────────────────────┘
             mediaControl: {
                 projectors: [
-                    { id: "", name: "Projetor 1", description: "Sala principal" },
-                    { id: "", name: "Projetor 2", description: "Sala secundária" },
-                    { id: "", name: "Projetor 3" },
-                    { id: "", name: "Projetor 4" },
-                    { id: "", name: "Projetor 5" }
+                    { id: "116", name: "Projetor 1"},
+                    { id: "117", name: "Projetor 2"},
+                    { id: "118", name: "Projetor 3" },
+                    { id: "119", name: "Projetor 4" },
+                    { id: "120", name: "Projetor 5" }
                 ],
                 televisions: [
-                    { id: "", name: "Televisão 1", description: "Samsung 65\"" },
-                    { id: "", name: "Televisão 2", description: "LG 55\"" }
+                    { id: "", name: "Televisão 1"},
+                    { id: "", name: "Televisão 2"}
                 ],
                 computers: [
                     { id: "", name: "Computador" }
@@ -528,7 +527,7 @@ const CLIENT_CONFIG = {
             curtains: [],
             airConditioner: {
                 zones: [
-                    { id: "circulacao", name: "Circulação", deviceId: "182" }
+                    { id: "maquete", name: "Maquete", deviceId: "107" }
                 ]
             },
             tv: null,
@@ -538,9 +537,104 @@ const CLIENT_CONFIG = {
 
         // AMBIENTE 7 ─────────────────────────────────────────────────────────────
         ambiente7: {
-            name: "Cultura",
+            name: "Holograma",
             visible: true,
             order: 7,
+            hasPhoto: true,
+            photoFilename: "holograma.webp",
+            photoAlt: "Holograma",
+            features: {
+                feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" },
+                featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
+            },
+            mediaControl: {
+                projectors: [],
+                televisions: [],
+                playback: {
+                    powerDevices: [],
+                    transportDeviceId: "",
+                    volumeDeviceId: "",
+                    volumeLabel: "Volume geral"
+                }
+            },
+            lights: [],
+            curtains: [],
+            airConditioner: null,
+            tv: null,
+            htv: null,
+            audio: null
+        },
+
+        // AMBIENTE 8 ─────────────────────────────────────────────────────────────
+        ambiente8: {
+            name: "Processos",
+            visible: true,
+            order: 8,
+            hasPhoto: true,
+            photoFilename: "processos.webp",
+            photoAlt: "Processos",
+            // Opcional: Nomes específicos dos arquivos de foto (deixe vazio para usar o padrão)
+            // photoFiles: {
+            //     "320": "photo-circulacao-320w.webp",
+            //     "640": "photo-circulacao-640w.webp",
+            //     "960": "photo-circulacao-960w.webp",
+            //     "1280": "photo-circulacao-1280w.webp",
+            //     "1920": "photo-circulacao-1920w.webp"
+            // },
+            features: {
+                feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" },
+                feature2: { label: "Conforto", icon: "ar-condicionado.svg", route: "conforto" },
+                feature3: { label: "Mídia", icon: "icon-media.svg", route: "midia" },
+                featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
+            },
+            // ┌─────────────────────────────────────────────────────────────────┐
+            // │ EXEMPLO: Projetores E Televisores juntos                       │
+            // │                                                                 │
+            // │ Você pode ter ambos os tipos de dispositivo no mesmo ambiente  │
+            // │ Personalize os nomes e IDs conforme seus dispositivos reais    │
+            // └─────────────────────────────────────────────────────────────────┘
+            mediaControl: {
+                projectors: [
+                    { id: "116", name: "Projetor 1"},
+                    { id: "117", name: "Projetor 2"},
+                    { id: "118", name: "Projetor 3" },
+                    { id: "119", name: "Projetor 4" },
+                    { id: "120", name: "Projetor 5" }
+                ],
+                televisions: [
+                    { id: "123", name: "Esquerda"},
+                    { id: "122", name: "Direita"}
+                ],
+                computers: [
+                    { id: "", name: "Computador" }
+                ],
+                playback: {
+                    powerDevices: [""],
+                    transportDeviceId: "",
+                    volumeDeviceId: "",
+                    volumeLabel: "Volume geral"
+                }
+            },
+            lights: [
+                { id: "40", name: "Spots" },
+                { id: "44", name: "Spots TV" }
+            ],
+            curtains: [],
+            airConditioner: {
+                zones: [
+                    { id: "maquete", name: "Maquete", deviceId: "107" }
+                ]
+            },
+            tv: null,
+            htv: null,
+            audio: null
+        },
+
+        // AMBIENTE 9 ─────────────────────────────────────────────────────────────
+        ambiente9: {
+            name: "Cultura",
+            visible: true,
+            order: 9,
             hasPhoto: true,
             photoFilename: "cultura.webp",
             photoAlt: "Cultura",
@@ -570,7 +664,7 @@ const CLIENT_CONFIG = {
             ],
             airConditioner: {
                 zones: [
-                    { id: "suite1", name: "Suíte I", deviceId: "188" }
+                    { id: "suite1", name: "Suíte I", deviceId: "108" }
                 ]
             },
             tv: {
@@ -590,11 +684,11 @@ const CLIENT_CONFIG = {
             audio: null
         },
 
-        // AMBIENTE 8 ─────────────────────────────────────────────────────────────
-        ambiente8: {
+        // AMBIENTE 10 ────────────────────────────────────────────────────────────
+        ambiente10: {
             name: "Descanso",
             visible: true,
-            order: 8,
+            order: 10,
             hasPhoto: true,
             photoFilename: "descanso.webp",
             photoAlt: "Descanso",
@@ -620,7 +714,7 @@ const CLIENT_CONFIG = {
             mediaControl: {
                 projectors: [],
                 televisions: [
-                    { id: "185", name: "TV", description: "Televisão principal" },
+                    { id: "124", name: "TV", description: "Televisão principal" },
                     { id: "191", name: "HTV", description: "Home Theater" }
                 ],
                 playback: {
@@ -641,12 +735,12 @@ const CLIENT_CONFIG = {
             ],
             airConditioner: {
                 zones: [
-                    { id: "suite2", name: "Suíte II", deviceId: "180" }
+                    { id: "suite2", name: "Suíte II", deviceId: "109" }
                 ]
             },
             tv: {
-                deviceId: "185",
-                volumeDeviceId: "185",
+                deviceId: "124",
+                volumeDeviceId: "124",
                 receiverId: null,
                 hasMacro: true,
                 macroName: "suite2"
@@ -661,7 +755,35 @@ const CLIENT_CONFIG = {
             audio: null
         },
 
+        // AMBIENTE 11 ────────────────────────────────────────────────────────────
+        ambiente11: {
+            name: "Banheiros",
+            visible: true,
+            order: 11,
+            hasPhoto: true,
+            photoFilename: "banheiros.webp",
+            photoAlt: "Banheiros",
+            features: {
+                feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" },
+                featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
+            },
+            lights: [
+                { id: "49", name: "Barra Led e Exaustor Feminino" },
+                { id: "47", name: "Barra Led e Exaustor Masculino" },
+                { id: "48", name: "Espelho e Spots Feminino" },
+                { id: "46", name: "Espelho e Spots Masculino" },
+                { id: "50", name: "Plafon e Led PCD" }
+            ],
+            curtains: [],
+            airConditioner: null,
+            tv: null,
+            htv: null,
+            audio: null
+        }
+
     },
+
+    
 
     // ═══════════════════════════════════════════════════════════════════════════
     // DISPOSITIVOS GLOBAIS
@@ -672,19 +794,20 @@ const CLIENT_CONFIG = {
     devices: {
         // Mapeamento de dispositivos de ar-condicionado para controle de temperatura
         airConditioners: {
-            "varanda": "110",
-            "living": "167",
-            "circulacao": "182",
-            "suite1": "188",
-            "suite2": "180",
-            "suiteMaster": "186"
+            "varanda": "103",
+            "living": "104",
+            "living2": "106",
+            "pesquisa": "105",
+            "maquete": "107",
+            "suite1": "108",
+            "suite2": "109"
         },
 
         // Dispositivos para inicialização (polling inicial)
         initializeDevices: [
             "44", "95", "96", "41", "45", "40", "31",  // Luzes Varanda
             "109", "115", "116",                        // Cortinas Varanda
-            "110"                                       // AC Varanda
+            "103"                                       // AC Varanda
         ],
 
         // Receptores de áudio

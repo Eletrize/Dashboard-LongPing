@@ -43,8 +43,11 @@ function trUi(key, params) {
   }, template);
 }
 
+console.warn('===== SCRIPT.JS CARREGADO COM SUCESSO =====');
+
 const CONTROL_SELECTOR =
   ".room-control[data-device-id], .control-card[data-device-id]";
+const LIGHT_FEATURE_SELECTOR = ".lights-feature[data-env]";
 const MASTER_BUTTON_SELECTOR = ".room-master-btn[data-device-ids]";
 const deviceControlCache = new Map();
 const masterButtonCache = new Set();
@@ -109,7 +112,7 @@ const ICON_ASSET_PATHS = [
   "images/icons/icon-settings.svg",
   "images/icons/icon-home.svg",
   "images/icons/back-button.svg",
-  "images/icons/Eletrize.svg",
+  "images/icons/eletrize.svg",
   "images/icons/Fullscreen.svg",
   "images/icons/icon-limpar.svg",
   "images/icons/icon-mouse.svg",
@@ -134,7 +137,6 @@ function buildRoomAssetList() {
     ROOM_IMAGE_WIDTHS.forEach((width) =>
       assets.push(`images/optimized/${base}-${width}.webp`)
     );
-    assets.push(`images/Images/${base}.jpg`);
   });
   return assets;
 }
@@ -204,7 +206,6 @@ ROOM_IMAGE_BASES.forEach((base) => {
         : "background";
     AssetPreloader.add(`images/optimized/${base}-${width}.webp`, { priority });
   });
-  AssetPreloader.add(`images/Images/${base}.jpg`, { priority: "background" });
 });
 
 AssetPreloader.add("images/pwa/app-icon-420.webp", { priority: "critical" });
@@ -1673,6 +1674,11 @@ document.addEventListener("DOMContentLoaded", () => {
   updateTVPowerState("off");
   initVolumeSlider();
 
+  // Forçar sync inicial dos cards lights-feature quando a home renderiza
+  if (typeof updateLightFeatureIcons === "function") {
+    setTimeout(() => updateLightFeatureIcons(true), 150);
+  }
+
   // Re-inicializar quando a página mudar (para SPAs)
   window.addEventListener("hashchange", () => {
     setTimeout(() => {
@@ -1680,7 +1686,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
   });
 
+  // Re-sincronizar ícones das features de luz ao trocar de rota (home/ambiente)
+  window.addEventListener("hashchange", () => {
+    if (typeof updateLightFeatureIcons !== "function") return;
+    // Pequeno atraso para garantir que o DOM foi re-renderizado
+    setTimeout(() => updateLightFeatureIcons(true), 120);
+  });
+
   // Listener para inicialização de dispositivos da Varanda (ambiente1)
+  // DESABILITADO: Causava spam de comandos initialize
+  /*
   window.addEventListener("hashchange", () => {
     const newHash = window.location.hash;
     console.log("🏠 [hashchange] Verificando se é ambiente1:", newHash);
@@ -1693,6 +1708,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 500);
     }
   });
+  */
 
   // Listener específico para página de música
   window.addEventListener("hashchange", () => {
@@ -1974,6 +1990,11 @@ function collectControlsFromNode(node) {
     changed = registerMasterButton(node) || changed;
   }
 
+  // Lights-feature cards rely on polling state; flag changes so we sync icons
+  if (node.matches && node.matches(LIGHT_FEATURE_SELECTOR)) {
+    changed = true;
+  }
+
   if (typeof node.querySelectorAll === "function") {
     node.querySelectorAll(CONTROL_SELECTOR).forEach(function (el) {
       changed = registerControlElement(el) || changed;
@@ -1981,6 +2002,10 @@ function collectControlsFromNode(node) {
 
     node.querySelectorAll(MASTER_BUTTON_SELECTOR).forEach(function (btn) {
       changed = registerMasterButton(btn) || changed;
+    });
+
+    node.querySelectorAll(LIGHT_FEATURE_SELECTOR).forEach(function () {
+      changed = true;
     });
   }
 
@@ -1999,6 +2024,10 @@ function removeControlsFromNode(node) {
     changed = unregisterMasterButton(node) || changed;
   }
 
+  if (node.matches && node.matches(LIGHT_FEATURE_SELECTOR)) {
+    changed = true;
+  }
+
   if (typeof node.querySelectorAll === "function") {
     node.querySelectorAll(CONTROL_SELECTOR).forEach(function (el) {
       changed = unregisterControlElement(el) || changed;
@@ -2006,6 +2035,10 @@ function removeControlsFromNode(node) {
 
     node.querySelectorAll(MASTER_BUTTON_SELECTOR).forEach(function (btn) {
       changed = unregisterMasterButton(btn) || changed;
+    });
+
+    node.querySelectorAll(LIGHT_FEATURE_SELECTOR).forEach(function () {
+      changed = true;
     });
   }
 
@@ -2031,6 +2064,10 @@ function primeControlCaches(options) {
   root.querySelectorAll(MASTER_BUTTON_SELECTOR).forEach(function (btn) {
     registerMasterButton(btn);
   });
+
+  if (typeof updateLightFeatureIcons === "function") {
+    updateLightFeatureIcons(true);
+  }
 
   controlCachePrimed = true;
 }
@@ -3394,8 +3431,8 @@ safeLog("=== AMBIENTE DETECTADO ===", {
   isIOS,
   userAgent: navigator.userAgent.substring(0, 60) + "...",
 });
-const HUBITAT_PROXY_URL = "/hubitat-proxy";
-const POLLING_URL = "/polling";
+const HUBITAT_PROXY_URL = "/functions/hubitat-proxy";
+const POLLING_URL = "/functions/polling";
 window.musicPlayerUI = window.musicPlayerUI || {};
 
 // Hubitat Cloud (Maker API) configuration
@@ -3729,6 +3766,19 @@ async function sendHubitatCommand(deviceId, command, value) {
 
         console.log("📡 [sendHubitatCommand] Comando enviado com sucesso via proxy");
 
+        // ATUALIZAÇÃO INSTANTÂNEA: Atualiza o estado local e força sync rápido
+        if (command === "on" || command === "off") {
+          setStoredState(deviceId, command);
+          updateDeviceUI(deviceId, command, true);
+          currentPollingInterval = POLLING_INTERVAL_BASE_MS;
+          if (typeof updateDeviceStatesFromServer === "function") {
+            updateDeviceStatesFromServer({ skipSchedule: false });
+          }
+          console.log(
+            `✅ [sendHubitatCommand] Estado atualizado localmente e polling reajustado: ${deviceId} -> ${command}`
+          );
+        }
+
         // Tenta parse JSON, mas aceita resposta vazia
         try {
           return JSON.parse(text);
@@ -3816,6 +3866,8 @@ function curtainAction(el, action) {
 
 // --- Override para contornar CORS no browser ao chamar Hubitat ---
 // Envia comandos em modo no-cors (resposta opaca) e, em falha, faz um GET via Image.
+// DESABILITADO: Conflita com proxy local do Docker e não é necessário com CORS configurado
+/*
 try {
   if (typeof sendHubitatCommand === "function") {
     const _corsBypassSend = function (deviceId, command, value) {
@@ -3840,7 +3892,7 @@ try {
               beacon.referrerPolicy = "no-referrer";
               beacon.src = url;
             } catch (_) {
-              /* ignore */
+              // ignore
             }
             console.error("Erro ao enviar comando (CORS?):", err);
             return null;
@@ -3851,7 +3903,7 @@ try {
           beacon.referrerPolicy = "no-referrer";
           beacon.src = url;
         } catch (_) {
-          /* ignore */
+          // ignore
         }
         return Promise.resolve(null);
       }
@@ -3861,14 +3913,15 @@ try {
     sendHubitatCommand = _corsBypassSend;
   }
 } catch (_) {
-  /* ignore */
+  // ignore
 }
+*/
 
 // --- Polling automÃƒÂ¡tico de estados ---
 
-const POLLING_INTERVAL_BASE_MS = 5000;
+const POLLING_INTERVAL_BASE_MS = 2000;
 const POLLING_INTERVAL_STEP_MS = 2000;
-const POLLING_INTERVAL_MAX_MS = 20000;
+const POLLING_INTERVAL_MAX_MS = 10000;
 let currentPollingInterval = POLLING_INTERVAL_BASE_MS;
 let pollingTimerHandle = null;
 let pollingActive = false;
@@ -4040,6 +4093,12 @@ async function updateDeviceStatesFromServer(options = {}) {
       return;
     }
 
+    console.warn('[POLLING] Devices recebidos:', Object.keys(devicesMap).join(', '));
+    const prologoDevices = ['52', '58', '67'].filter(id => devicesMap[id]);
+    if (prologoDevices.length > 0) {
+      console.warn('[POLLING] Prologo devices:', prologoDevices.map(id => id + ':' + devicesMap[id].state).join(', '));
+    }
+
     Object.entries(devicesMap).forEach(([deviceId, deviceData]) => {
       if (!deviceData) {
         return;
@@ -4053,8 +4112,19 @@ async function updateDeviceStatesFromServer(options = {}) {
           hasStateChanges = true;
         }
 
+        // Log para luzes do Prologo (52, 58, 67)
+        if (['52', '58', '67'].includes(String(deviceId))) {
+          console.warn('[POLLING] Device ' + deviceId + ': ' + previousState + ' -> ' + nextState);
+        }
+
         setStoredState(deviceId, nextState);
-        updateDeviceUI(deviceId, nextState);
+        // Polling deve sempre prevalecer sobre proteÃ§Ã£o de comandos recentes
+        recentCommands.delete(deviceId);
+        
+        if (['52', '58', '67'].includes(String(deviceId))) {
+          console.warn('[POLLING] Calling updateDeviceUI(' + deviceId + ', ' + nextState + ', true)');
+        }
+        updateDeviceUI(deviceId, nextState, true);
 
         if (String(deviceId) === "15" && deviceData.volume !== undefined) {
           updateDenonVolumeUI(deviceData.volume);
@@ -4068,6 +4138,13 @@ async function updateDeviceStatesFromServer(options = {}) {
     if (typeof updateMasterLightToggleState === "function") {
       updateMasterLightToggleState();
     }
+    
+    // DEBUG: Verificar estados salvos após polling
+    console.log('🔵 [POLLING FINAL] Estados salvos:', {
+      '52': getStoredState('52'),
+      '58': getStoredState('58'),
+      '67': getStoredState('67')
+    });
   } catch (error) {
     encounteredError = true;
     console.error("Erro no polling:", error);
@@ -4115,6 +4192,11 @@ async function updateDeviceStatesFromServer(options = {}) {
 }
 
 function updateDeviceUI(deviceId, state, forceUpdate = false) {
+  // Log de entrada
+  if (['52', '58', '67'].includes(String(deviceId))) {
+    console.warn('[updateDeviceUI] ENTRY: deviceId=' + deviceId + ', state=' + state + ', force=' + forceUpdate);
+  }
+  
   // Verificar se o DOM está pronto
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () =>
@@ -4179,6 +4261,14 @@ function updateDeviceUI(deviceId, state, forceUpdate = false) {
   }
 
   updateAllMasterButtons();
+  
+  // Atualizar icones dos cards .lights-feature que contem este deviceId
+  if (['52', '58', '67'].includes(String(deviceId))) {
+    console.warn('[updateDeviceUI] Calling updateLightFeatureIcons for device ' + deviceId + ', force=' + forceUpdate);
+  }
+  if (typeof updateLightFeatureIcons === "function") {
+    updateLightFeatureIcons(forceUpdate);
+  }
 }
 
 function updateAllMasterButtons(forceUpdate = false) {
@@ -4208,7 +4298,18 @@ function updateAllMasterButtons(forceUpdate = false) {
 
 // FunÃƒÂ§ÃƒÂµes auxiliares para botÃƒÂµes master (movidas do HTML)
 function anyOn(deviceIds) {
-  return (deviceIds || []).some((id) => (getStoredState(id) || "off") === "on");
+  const result = (deviceIds || []).some((id) => {
+    const state = getStoredState(id) || "off";
+    return state === "on";
+  });
+  
+  // Log apenas para ambiente1 (Prólogo)
+  if (deviceIds && deviceIds.length > 0 && ['52', '58', '67'].includes(String(deviceIds[0]))) {
+    const states = deviceIds.map(id => `${id}:${getStoredState(id) || 'off'}`).join(', ');
+    console.log(`🔍 [anyOn] IDs=[${deviceIds.join(',')}], states=[${states}], result=${result}`);
+  }
+  
+  return result;
 }
 
 // Função para inicializar e sincronizar estados dos botÃƒÂµes master na home
@@ -4887,21 +4988,28 @@ async function loadAllDeviceStatesGlobally() {
     }
     console.log("Ã°Å¸â€œÂ¡ Estados recebidos:", data);
 
-    // NormalizaÃƒÂ§ÃƒÂ£o do formato de resposta:
+    // Normalização do formato de resposta:
     // Formato antigo esperado: { devices: { id: { state, success } } }
     // Novo formato (Cloudflare Function refatorada): { success:true, data:[ { id, attributes:[{name:'switch', currentValue:'on'}] } ] }
+    // Formato alternativo: resposta é um array puro de devices
     if (!data.devices) {
       try {
-        if (Array.isArray(data.data)) {
+        const list = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : null;
+
+        if (list) {
           console.log(
-            "Ã°Å¸â€â€ž Normalizando",
-            data.data.length,
+            "🧠 Normalizando",
+            list.length,
             "dispositivos do formato novo..."
           );
           const mapped = {};
-          data.data.forEach((d, index) => {
+          list.forEach((d, index) => {
             if (!d || !d.id) {
-              console.warn(`Ã¢Å¡Â Ã¯Â¸Â Dispositivo ${index} invÃƒÂ¡lido:`, d);
+              console.warn(`⚠️ Dispositivo ${index} inválido:`, d);
               return;
             }
 
@@ -4920,7 +5028,7 @@ async function loadAllDeviceStatesGlobally() {
                 console.log(`Ã°Å¸â€œâ€¹ Device ${d.id}: switch=${state}`);
               } else {
                 console.log(
-                  `Ã°Å¸â€Ëœ Device ${d.id}: não é lÃƒÂ¢mpada (sem atributo 'switch'), pulando...`
+                  `💡 Device ${d.id}: não é lâmpada (sem atributo 'switch'), pulando...`
                 );
                 return; // Pular dispositivos sem switch (botÃƒÂµes, sensores, etc.)
               }
@@ -5231,6 +5339,7 @@ function collectLightFeatureIds(card) {
   if ((!ids || ids.length === 0) && typeof getEnvironmentLightIds === "function" && envKey) {
     ids = getEnvironmentLightIds(envKey) || [];
     card.dataset.deviceIds = ids.join(",");
+    console.warn('[collectLightFeatureIds] Card ' + envKey + ': got ' + ids.length + ' IDs: [' + ids.join(',') + ']');
   }
 
   return ids;
@@ -5239,14 +5348,21 @@ function collectLightFeatureIds(card) {
 function setLightFeatureIcon(card, state) {
   if (!card || !card.dataset) return;
   const img = card.querySelector("img");
-  if (!img) return;
+  if (!img) {
+    console.warn('[setLightFeatureIcon] Card ' + card.dataset.env + ': img NOT found!');
+    return;
+  }
 
   const nextIcon = state === "on"
     ? "images/icons/icon-small-light-on.svg"
     : "images/icons/icon-small-light-off.svg";
 
-  if (!img.src || !img.src.includes(nextIcon.split("/").pop())) {
+  const oldSrc = img.src;
+  const changed = !img.src || !img.src.includes(nextIcon.split("/").pop());
+  
+  if (changed) {
     img.src = nextIcon;
+    console.warn('[setLightFeatureIcon] Card ' + card.dataset.env + ': ' + oldSrc.split('/').pop() + ' -> ' + nextIcon.split('/').pop());
   }
 
   card.dataset.state = state;
@@ -5254,15 +5370,24 @@ function setLightFeatureIcon(card, state) {
 
 function updateLightFeatureIcons(forceUpdate = false) {
   const cards = document.querySelectorAll(".lights-feature[data-env]");
+  console.warn('[updateLightFeatureIcons] Found ' + cards.length + ' cards, force=' + forceUpdate);
+  
   if (!cards || cards.length === 0) return;
 
   cards.forEach(function (card) {
     const ids = collectLightFeatureIds(card);
+    console.log(`💡 [updateLightFeatureIcons] Card ${card.dataset.env}: ${ids.length} IDs`);
+    
     if (!ids || ids.length === 0) return;
 
     const state = anyOn(ids) ? "on" : "off";
+    console.log(`💡 [updateLightFeatureIcons] Card ${card.dataset.env}: estado=${state}, atual=${card.dataset.state}`);
+    
     if (forceUpdate || card.dataset.state !== state) {
+      console.log(`💡 [updateLightFeatureIcons] ✅ Atualizando card ${card.dataset.env} → ${state}`);
       setLightFeatureIcon(card, state);
+    } else {
+      console.log(`💡 [updateLightFeatureIcons] ⏭️  Card ${card.dataset.env} já está correto`);
     }
   });
 }
@@ -5862,12 +5987,12 @@ function updateMusicPlayerUI(artist, track, album, albumArt) {
     if (albumArt && albumArt !== "null" && albumArt !== "") {
       albumImgElement.src = albumArt;
       albumImgElement.onerror = function () {
-        // Se a imagem falhar, use placeholder
-        this.src = "images/Images/photo-varanda.jpg";
+        // Se a imagem falhar, use placeholder otimizado
+        this.src = "images/optimized/photo-varanda-720.webp";
       };
     } else {
       // Usar placeholder se não houver capa
-      albumImgElement.src = "images/Images/photo-varanda.jpg";
+      albumImgElement.src = "images/optimized/photo-varanda-720.webp";
     }
   }
 

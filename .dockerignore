@@ -1,0 +1,15 @@
+node_modules
+.git
+.gitignore
+.env
+*.md
+.vscode
+.venv
+__pycache__
+*.pyc
+.DS_Store
+wrangler.toml
+setup-*.ps1
+setup-*.sh
+CHECKLIST.md
+TEMPLATE-README.md

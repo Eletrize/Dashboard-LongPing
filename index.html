@@ -814,6 +814,13 @@
             })
             .catch((err) => console.error('[lights-master] Falha ao enviar comando', id, err));
         });
+        
+        // ATUALIZAÇÃO INSTANTÂNEA: Atualiza ícone imediatamente
+        if (typeof updateLightFeatureIcons === 'function') {
+          updateLightFeatureIcons(true);
+          console.log(`✅ [lights-master] Ícones sincronizados imediatamente para ${envKey}`);
+        }
+        
         if (typeof syncAllVisibleControls === 'function') {
           setTimeout(() => syncAllVisibleControls(true), 200);
         }
@@ -1006,6 +1013,7 @@
           }
 
           const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
+          const isPresentation = feature.action === 'executeScene';
           const lightEvents = isLightsFeature
             ? `
                 onpointerdown="handleLightsPressStart('${envKey}')"
@@ -1019,7 +1027,7 @@
             <div class="${cardClass} ${isLightsFeature ? 'lights-feature' : ''}" ${lightEvents}
               data-env="${envKey}" data-feature="${feature.route}" data-device-ids="${lightIds.join(',')}" data-state="off">
               <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
-              <div class="control-label">${label}</div>
+              ${isPresentation ? '' : `<div class="control-label">${label}</div>`}
             </div>
           `;
         }).join('');
@@ -2013,7 +2021,7 @@
         <div class="music-player-content">
           <div class="music-primary">
             <div class="music-album">
-              <img class="music-album-img" src="images/Images/photo-varanda.jpg" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
+              <img class="music-album-img" src="images/optimized/photo-varanda-720.webp" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
             </div>
 
             <div class="music-info">
@@ -2100,7 +2108,7 @@
     <div class="ambiente2-luzes-wrapper ambiente-grid lights-loading">
           <div class="music-primary">
     <div class="ambiente3-luzes-wrapper ambiente-grid lights-loading">
-              <img class="music-album-img" src="images/Images/photo-living.jpg" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
+              <img class="music-album-img" src="images/optimized/photo-living-720.webp" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
     <div class="ambiente4-luzes-wrapper ambiente-grid lights-loading">
 
     <div class="ambiente5-luzes-wrapper ambiente-grid lights-loading">
@@ -2187,7 +2195,7 @@
         <div class="music-player-content">
           <div class="music-primary">
             <div class="music-album">
-              <img class="music-album-img" src="images/Images/photo-piscina.jpg" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
+              <img class="music-album-img" src="images/optimized/photo-piscina-720.webp" alt="Capa do álbum" loading="lazy" decoding="async" width="720" height="540">
             </div>
 
             <div class="music-info">
@@ -5848,6 +5856,52 @@
     </div>
 
         `,
+
+        ambiente11: () => {
+          const envName = getTranslatedEnvName('ambiente11', 'Banheiros');
+          return `
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container ambiente11-page">
+
+    <div class="page-header">
+
+        <button class="back-btn" onclick="spaNavigate('home')"><img src="images/icons/back-button.svg" alt="Voltar"></button>
+
+        <h1 class="page-title">${envName}</h1>
+
+    </div>
+
+    
+
+    <div class="ambiente11-controls-wrapper ambiente-grid">
+        ${generateFeatureButtons('ambiente11')}
+    </div>
+
+</div>
+          `;
+        },
+
+        "ambiente11-luzes": () => `
+
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container ambiente11-page ambiente11-luzes-page">
+
+    <div class="page-header">
+        <button class="back-btn" onclick="spaNavigate('ambiente11')">
+            <img src="images/icons/back-button.svg" alt="Voltar">
+        </button>
+        <h1 class="page-title">Iluminação</h1>
+    </div>
+
+    <div class="ambiente11-luzes-wrapper ambiente-grid">
+      <!-- Luzes geradas dinamicamente pelo config.js -->
+    </div>
+
+</div>
+
+        `,
       };
 
       function spaNavigate(page) {
@@ -6180,7 +6234,8 @@
         const luzesPages = [
           "ambiente1-luzes", "ambiente2-luzes", "ambiente3-luzes",
           "ambiente4-luzes", "ambiente5-luzes", "ambiente6-luzes",
-          "ambiente7-luzes", "ambiente8-luzes", "ambiente9-luzes"
+          "ambiente7-luzes", "ambiente8-luzes", "ambiente9-luzes",
+          "ambiente10-luzes", "ambiente11-luzes"
         ];
         if (luzesPages.includes(page)) {
           setTimeout(() => {

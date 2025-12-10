@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = "v1.2.0";
+﻿const CACHE_VERSION = "v1.2.1";
 const CACHE_NAME = `eletrize-${CACHE_VERSION}`;
 const PRECACHE_ASSETS = [
   "/",
@@ -55,6 +55,11 @@ self.addEventListener("fetch", (event) => {
   const isHubitat =
     /cloud\.hubitat\.com$/i.test(url.hostname) ||
     /\/apps\/api\//i.test(url.pathname);
+
+  // Nunca cacheia/intercepta chamadas para os proxies locais
+  if (url.pathname.startsWith("/functions/")) {
+    return;
+  }
 
   if (!isSameOrigin || isHubitat) {
     return;
