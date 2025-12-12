@@ -22,6 +22,9 @@ $HUBITAT_ACCESS_TOKEN = "138422cd-a48d-41dc-8beb-cb0327e65c24"
 $HUBITAT_BASE_URL = "https://cloud.hubitat.com/api/ef4b8bb9-5b3f-43bc-aa4b-7af0c873ace3/apps/101/devices"
 $HUBITAT_FULL_URL = "https://cloud.hubitat.com/api/ef4b8bb9-5b3f-43bc-aa4b-7af0c873ace3"
 
+# IP local da Hubitat atualizado
+$HUBITAT_LOCAL_IP = "192.168.4.90"
+
 Write-Host ""
 Write-Host "🔐 Configurando variáveis automaticamente..." -ForegroundColor Yellow
 

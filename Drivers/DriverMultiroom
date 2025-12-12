@@ -1,0 +1,879 @@
+/**
+ *  AAT Multiroom Digital Driver
+ *  Controla PMR (Amplificador Digital Multiroom) AAT via TCP ou UDP
+ *
+ *  Baseado em API Rev. 12 - Firmware V3.08+
+ *  
+ *  TCP: Porta 1024 (conexão persistente)
+ *  UDP: Porta 5000 (sem conexão)
+ *
+ *  Versão: 2.0
+ *  Data: 2024-11
+ */
+
+import groovy.transform.Field
+import hubitat.device.HubAction
+import hubitat.device.Protocol
+
+metadata {
+    definition(name: "AAT Multiroom Digital v2", namespace: "trato.aat", author: "VH") {
+        capability "AudioVolume"
+        capability "Switch"
+        capability "Actuator"
+        capability "Sensor"
+        capability "Refresh"
+        capability "Initialize"
+
+        // Comandos de controle básico
+        command "powerOn"
+        command "powerOff"
+        command "powerToggle"
+        command "connect"
+        command "disconnect"
+        
+        // Comandos de volume
+        command "setZoneVolume", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"],
+                                   [name: "volume*", type: "NUMBER", description: "Volume (0-87)"]]
+        command "volumeUp"
+        command "volumeDown"
+        command "volumeUpZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        command "volumeDownZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        
+            // Comandos de mute
+            command "muteZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+            command "unmuteZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        command "toggleMuteZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        command "muteAll"
+        command "unmuteAll"
+        
+        // Comandos de entrada
+        command "selectInput", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"],
+                                [name: "input*", type: "NUMBER", description: "Input (1-8)"]]
+        command "nextInput", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        command "prevInput", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        
+        // Comandos de controle de som
+        command "setBass", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"],
+                            [name: "bass*", type: "NUMBER", description: "Bass (0-14, 7=0dB)"]]
+        command "setTreble", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"],
+                              [name: "treble*", type: "NUMBER", description: "Treble (0-14, 7=0dB)"]]
+        command "setBalance", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"],
+                               [name: "balance*", type: "NUMBER", description: "Balance (0-20, 10=center)"]]
+        
+        // Comandos de grupo/link
+        command "linkZones", [[name: "zone1*", type: "NUMBER", description: "Zone 1 (1-6)"],
+                              [name: "zone2*", type: "NUMBER", description: "Zone 2 (1-6)"]]
+        command "unlinkZone", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        
+        // Comandos de preset/cena
+        command "savePreset", [[name: "preset*", type: "NUMBER", description: "Preset (1-10)"]]
+        command "loadPreset", [[name: "preset*", type: "NUMBER", description: "Preset (1-10)"]]
+        
+        // Status de zonas
+        command "getZoneStatus", [[name: "zone*", type: "NUMBER", description: "Zone (1-6)"]]
+        command "getAllStatus"
+        
+        // Atributos de status
+        attribute "power", "string"
+        attribute "volume", "number"
+        attribute "mute", "string"
+        attribute "input", "number"
+        attribute "bass", "number"
+        attribute "treble", "number"
+        attribute "balance", "number"
+        attribute "zone", "number"
+        attribute "connectionStatus", "string"
+        attribute "protocol", "string"
+        
+        // Status de todas as zonas
+        attribute "zone1Volume", "number"
+        attribute "zone2Volume", "number"
+        attribute "zone3Volume", "number"
+        attribute "zone4Volume", "number"
+        attribute "zone5Volume", "number"
+        attribute "zone6Volume", "number"
+        attribute "zone1Mute", "string"
+        attribute "zone2Mute", "string"
+        attribute "zone3Mute", "string"
+        attribute "zone4Mute", "string"
+        attribute "zone5Mute", "string"
+        attribute "zone6Mute", "string"
+        attribute "zone1Input", "number"
+        attribute "zone2Input", "number"
+        attribute "zone3Input", "number"
+        attribute "zone4Input", "number"
+        attribute "zone5Input", "number"
+        attribute "zone6Input", "number"
+    }
+
+    preferences {
+        input name: "deviceIP", type: "text", title: "IP do Multiroom AAT", required: true, defaultValue: "192.168.1.100"
+        input name: "connectionType", type: "enum", title: "Tipo de Conexão", required: true, 
+              options: ["TCP", "UDP"], defaultValue: "TCP"
+        input name: "tcpPort", type: "number", title: "Porta TCP", required: false, defaultValue: 1024
+        input name: "udpPort", type: "number", title: "Porta UDP", required: false, defaultValue: 5000
+        input name: "defaultZone", type: "enum", title: "Zona Padrão", required: true,
+              options: ["1", "2", "3", "4", "5", "6"], defaultValue: "1"
+        input name: "numZones", type: "enum", title: "Número de Zonas", required: true,
+              options: ["2", "4", "6"], defaultValue: "6"
+        input name: "autoReconnect", type: "bool", title: "Reconectar automaticamente (TCP)", defaultValue: true
+        input name: "pollInterval", type: "enum", title: "Intervalo de Atualização", required: true,
+              options: ["Desligado", "30 segundos", "1 minuto", "5 minutos", "10 minutos"], defaultValue: "1 minuto"
+        input name: "logEnable", type: "bool", title: "Ativar logs de debug", defaultValue: true
+        input name: "logEnableTrace", type: "bool", title: "Ativar logs de trace (detalhado)", defaultValue: false
+    }
+}
+
+/* ===================== Constantes ===================== */
+@Field static final Integer MAX_VOLUME = 87
+@Field static final Integer MIN_VOLUME = 0
+@Field static final Integer MAX_BASS = 14
+@Field static final Integer MAX_TREBLE = 14
+@Field static final Integer MAX_BALANCE = 20
+@Field static final Integer MAX_ZONES = 6
+@Field static final Integer MAX_INPUTS = 8
+@Field static final Integer RECONNECT_DELAY = 5
+
+/* ===================== Lifecycle ===================== */
+def installed() {
+    logDebug "Driver instalado"
+    initialize()
+}
+
+def updated() {
+    logDebug "Configurações atualizadas"
+    unschedule()
+    initialize()
+    if (logEnable) runIn(1800, logsOff)
+}
+
+def initialize() {
+    logDebug "Inicializando driver AAT Multiroom v2"
+    
+    state.zone = (defaultZone ?: "1") as Integer
+    state.connected = false
+    state.lastResponse = now()
+    
+    sendEvent(name: "zone", value: state.zone)
+    sendEvent(name: "protocol", value: connectionType ?: "TCP")
+    sendEvent(name: "connectionStatus", value: "initializing")
+    
+    // Configurar polling
+    configurePollInterval()
+    
+    // Conectar
+    if (connectionType == "TCP") {
+        connect()
+    } else {
+        sendEvent(name: "connectionStatus", value: "ready")
+    }
+    
+    logInfo "Driver inicializado - ${connectionType} para ${deviceIP}"
+}
+
+def uninstalled() {
+    logDebug "Desinstalando driver"
+    unschedule()
+    disconnect()
+}
+
+private void configurePollInterval() {
+    switch (pollInterval) {
+        case "30 segundos":
+            runEvery1Minute(refresh) // Hubitat mínimo é 1 minuto
+            break
+        case "1 minuto":
+            runEvery1Minute(refresh)
+            break
+        case "5 minutos":
+            runEvery5Minutes(refresh)
+            break
+        case "10 minutos":
+            runEvery10Minutes(refresh)
+            break
+        default:
+            // Desligado - não agenda
+            break
+    }
+}
+
+/* ===================== Conexão TCP/UDP ===================== */
+def connect() {
+    if (connectionType == "TCP") {
+        connectTCP()
+    } else {
+        sendEvent(name: "connectionStatus", value: "ready")
+        logDebug "UDP não requer conexão persistente"
+    }
+}
+
+def disconnect() {
+    if (connectionType == "TCP") {
+        disconnectTCP()
+    }
+}
+
+private void connectTCP() {
+    logDebug "Conectando via TCP para ${deviceIP}:${tcpPort}"
+    
+    try {
+        interfaces.rawSocket.connect(deviceIP, tcpPort as Integer, byteInterface: false)
+        state.connected = true
+        sendEvent(name: "connectionStatus", value: "connected")
+        logInfo "Conectado via TCP"
+        
+        // Solicitar status inicial após conexão
+        runIn(1, "refresh")
+    } catch (Exception e) {
+        logError "Erro ao conectar TCP: ${e.message}"
+        state.connected = false
+        sendEvent(name: "connectionStatus", value: "disconnected")
+        
+        if (autoReconnect) {
+            runIn(RECONNECT_DELAY, "reconnect")
+        }
+    }
+}
+
+private void disconnectTCP() {
+    logDebug "Desconectando TCP"
+    try {
+        interfaces.rawSocket.disconnect()
+    } catch (Exception e) {
+        logDebug "Erro ao desconectar: ${e.message}"
+    }
+    state.connected = false
+    sendEvent(name: "connectionStatus", value: "disconnected")
+}
+
+def reconnect() {
+    logDebug "Tentando reconectar..."
+    if (connectionType == "TCP" && !state.connected) {
+        connectTCP()
+    }
+}
+
+// Callback para status do socket TCP
+def socketStatus(String message) {
+    logDebug "Socket status: ${message}"
+    
+    if (message.contains("error") || message.contains("disconnect")) {
+        state.connected = false
+        sendEvent(name: "connectionStatus", value: "disconnected")
+        
+        if (autoReconnect) {
+            runIn(RECONNECT_DELAY, "reconnect")
+        }
+    }
+}
+
+// Callback para dados recebidos via TCP
+def parse(String message) {
+    logTrace "Dados recebidos: ${message}"
+    state.lastResponse = now()
+    
+    if (message) {
+        parseAATResponse(message)
+    }
+}
+
+/* ===================== Envio de Comandos ===================== */
+private void sendCommand(String command) {
+    if (!deviceIP) {
+        logError "IP não configurado"
+        return
+    }
+    
+    // Formato AAT: [t001 <COMANDO>]
+    String message = "[t001 ${command}]"
+    
+    logDebug "Enviando: ${message}"
+    
+    if (connectionType == "TCP") {
+        sendTCP(message)
+    } else {
+        sendUDP(message)
+    }
+}
+
+private void sendTCP(String message) {
+    try {
+        if (!state.connected) {
+            logDebug "Não conectado, tentando reconectar..."
+            connectTCP()
+            runIn(1, "sendDelayedCommand", [data: message])
+            return
+        }
+        
+        // Enviar via socket raw
+        interfaces.rawSocket.sendMessage(message)
+        logTrace "TCP enviado: ${message}"
+        
+    } catch (Exception e) {
+        logError "Erro ao enviar TCP: ${e.message}"
+        state.connected = false
+        sendEvent(name: "connectionStatus", value: "error")
+        
+        if (autoReconnect) {
+            runIn(RECONNECT_DELAY, "reconnect")
+        }
+    }
+}
+
+def sendDelayedCommand(data) {
+    if (state.connected) {
+        interfaces.rawSocket.sendMessage(data)
+    }
+}
+
+private void sendUDP(String message) {
+    try {
+        Integer port = udpPort ?: 5000
+        
+        // Converter string para bytes em hex
+        String hexMessage = message.bytes.encodeHex().toString()
+        
+        def hubAction = new HubAction(
+            hexMessage,
+            Protocol.LAN,
+            [
+                type: HubAction.Type.LAN_TYPE_UDPCLIENT,
+                destinationAddress: "${deviceIP}:${port}",
+                encoding: HubAction.Encoding.HEX_STRING,
+                parseWarning: true
+            ]
+        )
+        
+        sendHubCommand(hubAction)
+        logTrace "UDP enviado para ${deviceIP}:${port} - ${message}"
+        
+    } catch (Exception e) {
+        logError "Erro ao enviar UDP: ${e.message}"
+        sendEvent(name: "connectionStatus", value: "error")
+    }
+}
+
+// Alternativa: Envio UDP via hubitat.helper
+private void sendUDPSimple(String message) {
+    try {
+        Integer port = udpPort ?: 5000
+        
+        // Converter string para hex
+        String hexMessage = message.bytes.encodeHex().toString()
+        
+        def params = [
+            type: "LAN_TYPE_UDPCLIENT",
+            destinationAddress: "${deviceIP}:${port}",
+            data: hexMessage
+        ]
+        
+        def hubAction = new HubAction(params, null, [callback: "parseUDPResponse"])
+        sendHubCommand(hubAction)
+        
+        logTrace "UDP enviado: ${message}"
+    } catch (Exception e) {
+        logError "Erro UDP: ${e.message}"
+    }
+}
+
+def parseUDPResponse(response) {
+    logTrace "UDP Resposta: ${response}"
+    if (response?.body) {
+        parseAATResponse(new String(response.body.decodeHex()))
+    }
+}
+
+/* ===================== Controle de Energia ===================== */
+def on() {
+    powerOn()
+}
+
+def off() {
+    powerOff()
+}
+
+def powerOn() {
+    logDebug "Power ON"
+    sendCommand("PWRON")
+}
+
+def powerOff() {
+    logDebug "Power OFF"
+    sendCommand("PWROFF")
+}
+
+def powerToggle() {
+    logDebug "Power Toggle"
+    sendCommand("PWRTOG")
+}
+
+/* ===================== Controle de Volume ===================== */
+def setVolume(volume) {
+    setZoneVolume(state.zone ?: 1, volume)
+}
+
+// Compatibilidade: aceita formato "1/59" (zona/volume) vindo de chamadas com um único parâmetro
+def setZoneVolume(String zoneVolume) {
+    if (!zoneVolume) {
+        logError "setZoneVolume: parâmetro vazio"
+        return
+    }
+
+    List parts = zoneVolume.tokenize('/,; ')
+    if (parts.size() == 2) {
+        setZoneVolume(parts[0] as Integer, parts[1] as Integer)
+    } else if (parts.size() == 1) {
+        setZoneVolume(state.zone ?: 1, parts[0] as Integer)
+    } else {
+        logError "setZoneVolume: formato inválido '${zoneVolume}'"
+    }
+}
+
+def setZoneVolume(zone, volume) {
+    Integer z = validateZone(zone)
+    Integer vol = clamp(volume as Integer, MIN_VOLUME, MAX_VOLUME)
+    logDebug "Volume zona ${z}: ${vol}"
+    sendCommand("VOLSET ${z} ${vol}")
+}
+
+def volumeUp() {
+    volumeUpZone(state.zone ?: 1)
+}
+
+def volumeDown() {
+    volumeDownZone(state.zone ?: 1)
+}
+
+def volumeUpZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Volume+ zona ${z}"
+    sendCommand("VOL+ ${z}")
+}
+
+def volumeDownZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Volume- zona ${z}"
+    sendCommand("VOL- ${z}")
+}
+
+/* ===================== Controle de Mute ===================== */
+def mute() {
+    muteZone(state.zone ?: 1)
+}
+
+def unmute() {
+    unmuteZone(state.zone ?: 1)
+}
+
+def muteZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Mute zona ${z}"
+    sendCommand("MUTEON ${z}")
+}
+
+def unmuteZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Unmute zona ${z}"
+    sendCommand("MUTEOFF ${z}")
+}
+
+def toggleMuteZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Mute toggle zona ${z}"
+    sendCommand("MUTETOG ${z}")
+}
+
+def muteAll() {
+    logDebug "Mute todas as zonas"
+    Integer zones = (numZones ?: "6") as Integer
+    for (int z = 1; z <= zones; z++) {
+        sendCommand("MUTEON ${z}")
+        pauseExecution(50)
+    }
+}
+
+def unmuteAll() {
+    logDebug "Unmute todas as zonas"
+    Integer zones = (numZones ?: "6") as Integer
+    for (int z = 1; z <= zones; z++) {
+        sendCommand("MUTEOFF ${z}")
+        pauseExecution(50)
+    }
+}
+
+/* ===================== Controle de Entrada ===================== */
+def selectInput(zone, input) {
+    Integer z = validateZone(zone)
+    Integer inp = clamp(input as Integer, 1, MAX_INPUTS)
+    logDebug "Entrada ${inp} para zona ${z}"
+    sendCommand("INPSET ${z} ${inp}")
+}
+
+def nextInput(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Próxima entrada zona ${z}"
+    sendCommand("INP+ ${z}")
+}
+
+def prevInput(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Entrada anterior zona ${z}"
+    sendCommand("INP- ${z}")
+}
+
+/* ===================== Controle de Som (EQ) ===================== */
+def setBass(zone, bass) {
+    Integer z = validateZone(zone)
+    Integer b = clamp(bass as Integer, 0, MAX_BASS)
+    logDebug "Bass zona ${z}: ${b}"
+    sendCommand("BASSSET ${z} ${b}")
+}
+
+def setTreble(zone, treble) {
+    Integer z = validateZone(zone)
+    Integer t = clamp(treble as Integer, 0, MAX_TREBLE)
+    logDebug "Treble zona ${z}: ${t}"
+    sendCommand("TREBLESET ${z} ${t}")
+}
+
+def setBalance(zone, balance) {
+    Integer z = validateZone(zone)
+    Integer bal = clamp(balance as Integer, 0, MAX_BALANCE)
+    logDebug "Balance zona ${z}: ${bal}"
+    sendCommand("BALSET ${z} ${bal}")
+}
+
+/* ===================== Grupos/Links ===================== */
+def linkZones(zone1, zone2) {
+    Integer z1 = validateZone(zone1)
+    Integer z2 = validateZone(zone2)
+    logDebug "Linkando zonas ${z1} e ${z2}"
+    sendCommand("LINK ${z1} ${z2}")
+}
+
+def unlinkZone(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Deslinkando zona ${z}"
+    sendCommand("UNLINK ${z}")
+}
+
+/* ===================== Presets/Cenas ===================== */
+def savePreset(preset) {
+    Integer p = clamp(preset as Integer, 1, 10)
+    logDebug "Salvando preset ${p}"
+    sendCommand("PRESETSAVE ${p}")
+}
+
+def loadPreset(preset) {
+    Integer p = clamp(preset as Integer, 1, 10)
+    logDebug "Carregando preset ${p}"
+    sendCommand("PRESETLOAD ${p}")
+}
+
+/* ===================== Status/Refresh ===================== */
+def refresh() {
+    logDebug "Atualizando status"
+    
+    // Status de energia
+    sendCommand("PWRGET")
+    pauseExecution(100)
+    
+    // Status da zona padrão
+    Integer zone = state.zone ?: 1
+    getZoneStatus(zone)
+}
+
+def getZoneStatus(zone) {
+    Integer z = validateZone(zone)
+    logDebug "Obtendo status zona ${z}"
+    
+    sendCommand("VOLGET ${z}")
+    pauseExecution(50)
+    sendCommand("MUTEGET ${z}")
+    pauseExecution(50)
+    sendCommand("INPGET ${z}")
+}
+
+def getAllStatus() {
+    logDebug "Obtendo status de todas as zonas"
+    
+    sendCommand("PWRGET")
+    pauseExecution(100)
+    
+    Integer zones = (numZones ?: "6") as Integer
+    for (int z = 1; z <= zones; z++) {
+        sendCommand("VOLGET ${z}")
+        pauseExecution(50)
+        sendCommand("MUTEGET ${z}")
+        pauseExecution(50)
+        sendCommand("INPGET ${z}")
+        pauseExecution(50)
+    }
+}
+
+/* ===================== Parse de Respostas ===================== */
+private void parseAATResponse(String response) {
+    Long nowTs = now()
+    if (state.lastParseTs && (nowTs - (state.lastParseTs as Long)) < 150) {
+        // Proteção para não sobrecarregar o hub em caso de burst de mensagens
+        return
+    }
+    state.lastParseTs = nowTs
+
+    logTrace "Parseando: '${response}'"
+    
+    // Pode haver múltiplas respostas em uma mensagem
+    def matcher = response =~ /\[r(\d+)\s+([A-Z0-9\-+]+)(.*?)\]/
+    
+    Integer parsedCount = 0
+    while (matcher.find()) {
+        String seq = matcher.group(1)
+        String command = matcher.group(2).trim()
+        String paramsStr = (matcher.group(3) ?: "").trim()
+        List<String> params = paramsStr ? paramsStr.split("\\s+").toList() : []
+        
+        logTrace "Cmd: ${command}, Params: ${params}"
+        
+        processResponse(command, params)
+
+        parsedCount++
+        if (parsedCount >= 50) {
+            logDebug "parseAATResponse: limite de 50 mensagens alcançado (descartando restantes para proteger o hub)"
+            break
+        }
+    }
+    
+    sendEvent(name: "connectionStatus", value: "connected")
+}
+
+private void processResponse(String command, List<String> params) {
+    switch (command) {
+        case "PWRGET":
+        case "PWRON":
+        case "PWROFF":
+            processPowerResponse(params)
+            break
+            
+        case "VOLGET":
+        case "VOLSET":
+        case "VOL+":
+        case "VOL-":
+            processVolumeResponse(params)
+            break
+            
+        case "MUTEGET":
+        case "MUTEON":
+        case "MUTEOFF":
+        case "MUTETOG":
+            processMuteResponse(params)
+            break
+            
+        case "INPGET":
+        case "INPSET":
+        case "INP+":
+        case "INP-":
+            processInputResponse(params)
+            break
+            
+        case "BASSGET":
+        case "BASSSET":
+            processBassResponse(params)
+            break
+            
+        case "TREBLEGET":
+        case "TREBLESET":
+            processTrebleResponse(params)
+            break
+            
+        case "BALGET":
+        case "BALSET":
+            processBalanceResponse(params)
+            break
+            
+        case "LINK":
+        case "UNLINK":
+            logDebug "Link/Unlink: ${params}"
+            break
+            
+        case "ERROR":
+            logError "Erro do dispositivo: ${params.join(' ')}"
+            break
+            
+        default:
+            logDebug "Comando não tratado: ${command} ${params}"
+    }
+}
+
+private void processPowerResponse(List<String> params) {
+    if (params.size() >= 1) {
+        String status = params[0].toUpperCase()
+        Boolean isOn = (status == "ON" || status == "1")
+        
+        sendEvent(name: "power", value: isOn ? "on" : "off")
+        sendEvent(name: "switch", value: isOn ? "on" : "off")
+        logDebug "Power: ${isOn ? 'ON' : 'OFF'}"
+    }
+}
+
+private void processVolumeResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        Integer volume = params[1] as Integer
+        
+        // Atualizar atributo específico da zona
+        sendEvent(name: "zone${zone}Volume", value: volume)
+        
+        // Se for a zona padrão, atualizar atributo principal
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "volume", value: volume)
+            sendEvent(name: "level", value: volume)
+        }
+        
+        logDebug "Volume zona ${zone}: ${volume}"
+    }
+}
+
+private void processMuteResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        String status = params[1].toUpperCase()
+        Boolean isMuted = (status == "ON" || status == "1")
+        String muteValue = isMuted ? "muted" : "unmuted"
+        
+        sendEvent(name: "zone${zone}Mute", value: muteValue)
+        
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "mute", value: muteValue)
+        }
+        
+        logDebug "Mute zona ${zone}: ${muteValue}"
+    }
+}
+
+private void processInputResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        Integer input = params[1] as Integer
+        
+        sendEvent(name: "zone${zone}Input", value: input)
+        
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "input", value: input)
+        }
+        
+        logDebug "Input zona ${zone}: ${input}"
+    }
+}
+
+private void processBassResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        Integer bass = params[1] as Integer
+        
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "bass", value: bass)
+        }
+        
+        logDebug "Bass zona ${zone}: ${bass}"
+    }
+}
+
+private void processTrebleResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        Integer treble = params[1] as Integer
+        
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "treble", value: treble)
+        }
+        
+        logDebug "Treble zona ${zone}: ${treble}"
+    }
+}
+
+private void processBalanceResponse(List<String> params) {
+    if (params.size() >= 2) {
+        Integer zone = params[0] as Integer
+        Integer balance = params[1] as Integer
+        
+        if (zone == (state.zone ?: 1)) {
+            sendEvent(name: "balance", value: balance)
+        }
+        
+        logDebug "Balance zona ${zone}: ${balance}"
+    }
+}
+
+/* ===================== Utilitários ===================== */
+private Integer validateZone(zone) {
+    Integer z = (zone ?: state.zone ?: 1) as Integer
+    Integer maxZones = (numZones ?: "6") as Integer
+    return clamp(z, 1, maxZones)
+}
+
+private Integer clamp(Integer value, Integer min, Integer max) {
+    return Math.max(min, Math.min(max, value))
+}
+
+/* ===================== Logging ===================== */
+private void logInfo(String msg) {
+    log.info "${device.displayName}: ${msg}"
+}
+
+private void logDebug(String msg) {
+    if (logEnable) {
+        log.debug "${device.displayName}: ${msg}"
+    }
+}
+
+private void logTrace(String msg) {
+    if (logEnableTrace) {
+        log.trace "${device.displayName}: ${msg}"
+    }
+}
+
+private void logError(String msg) {
+    log.error "${device.displayName}: ${msg}"
+}
+
+def logsOff() {
+    log.warn "${device.displayName}: Logs de debug desabilitados"
+    device.updateSetting("logEnable", [value: "false", type: "bool"])
+}
+
+/* ===================== Testes ===================== */
+def testConnection() {
+    logInfo "Testando conexão..."
+    sendCommand("PWRGET")
+}
+
+def testAllCommands() {
+    logInfo "Testando comandos básicos..."
+    
+    // Teste de volume
+    runIn(1, "testVolumeCmd")
+}
+
+def testVolumeCmd() {
+    setZoneVolume(1, 30)
+    runIn(2, "testMuteCmd")
+}
+
+def testMuteCmd() {
+    muteZone(1)
+    runIn(2, "testUnmuteCmd")
+}
+
+def testUnmuteCmd() {
+    unmuteZone(1)
+    logInfo "Testes concluídos"
+}
+
+/* ===================== Comandos Raw ===================== */
+// Para usuários avançados - enviar comando raw
+command "sendRawCommand", [[name: "command*", type: "STRING", description: "Comando AAT (ex: VOLSET 1 50)"]]
+
+def sendRawCommand(String command) {
+    logDebug "Comando raw: ${command}"
+    sendCommand(command)
+}

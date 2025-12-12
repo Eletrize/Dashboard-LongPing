@@ -731,6 +731,77 @@ function toggleRoomControl(el) {
     });
 }
 
+// Toggle exclusivo para LED Quente e Frio em Circulação (ambiente2)
+// Quando um é ligado, o outro é automaticamente desligado
+function toggleExclusiveLED(el) {
+  const ICON_ON = "images/icons/icon-small-light-on.svg";
+  const ICON_OFF = "images/icons/icon-small-light-off.svg";
+  const img = el.querySelector(".room-control-icon, .control-icon");
+  const isOff = (el.dataset.state || "off") === "off";
+  const newState = isOff ? "on" : "off";
+  const deviceId = el.dataset.deviceId;
+  
+  // IDs do LED Quente e Frio em Circulação
+  const LED_QUENTE_ID = "55";
+  const LED_FRIO_ID = "54";
+  
+  if (!deviceId || (deviceId !== LED_QUENTE_ID && deviceId !== LED_FRIO_ID)) {
+    toggleRoomControl(el); // Fallback para toggle normal
+    return;
+  }
+
+  // Determinar qual é o outro LED
+  const otherLedId = deviceId === LED_QUENTE_ID ? LED_FRIO_ID : LED_QUENTE_ID;
+  
+  // Marcar comando recente para proteger contra polling
+  recentCommands.set(deviceId, Date.now());
+  recentCommands.set(otherLedId, Date.now());
+
+  // Atualizar UI imediatamente
+  el.dataset.state = newState;
+  if (img) img.src = newState === "on" ? ICON_ON : ICON_OFF;
+  setStoredState(deviceId, newState);
+
+  console.log(`Enviando comando ${newState} para LED ${deviceId}`);
+
+  // Enviar comando para o LED que foi clicado
+  sendHubitatCommand(deviceId, newState === "on" ? "on" : "off")
+    .then(() => {
+      console.log(`✅ Comando ${newState} enviado para LED ${deviceId}`);
+      
+      // Se está ligando este LED, desligar o outro após 100ms
+      if (newState === "on") {
+        setTimeout(() => {
+          console.log(`Desligando LED ${otherLedId} automaticamente...`);
+          sendHubitatCommand(otherLedId, "off")
+            .then(() => {
+              console.log(`✅ LED ${otherLedId} desligado automaticamente`);
+              setStoredState(otherLedId, "off");
+              
+              // Atualizar visualmente o outro LED se ele estiver na página
+              const otherElement = document.querySelector(`[data-device-id="${otherLedId}"]`);
+              if (otherElement) {
+                otherElement.dataset.state = "off";
+                const otherImg = otherElement.querySelector(".room-control-icon, .control-icon");
+                if (otherImg) otherImg.src = ICON_OFF;
+              }
+            })
+            .catch((error) => {
+              console.error(`⚠️ Erro ao desligar LED ${otherLedId}:`, error);
+            });
+        }, 100);
+      }
+    })
+    .catch((error) => {
+      console.error(`⚠️ Erro ao enviar comando para LED ${deviceId}:`, error);
+      // Reverter o estado visual em caso de erro
+      const revertState = newState === "on" ? "off" : "on";
+      el.dataset.state = revertState;
+      if (img) img.src = revertState === "on" ? ICON_ON : ICON_OFF;
+      setStoredState(deviceId, revertState);
+    });
+}
+
 function togglePoolControl(el, action) {
   const deviceId = el.dataset.deviceId;
   if (!action || !deviceId) {
@@ -7008,13 +7079,11 @@ async function handleConfortoAction(envKey, action) {
         // Atualizar estado armazenado para o toggle funcionar
         setStoredState(deviceId, powerCommand);
       } else if (action === 'cool') {
-        console.log(`Setting AC ${deviceId} to COOL @ 23°C`);
-        await sendHubitatCommand(deviceId, 'setCoolingSetpoint', 23);
-        await sendHubitatCommand(deviceId, 'cool');
+        console.log(`Setting AC ${deviceId} to COOL @ temp18`);
+        await sendHubitatCommand(deviceId, 'temp18');
       } else if (action === 'heat') {
-        console.log(`Setting AC ${deviceId} to HEAT @ 26°C`);
-        await sendHubitatCommand(deviceId, 'setHeatingSetpoint', 26);
-        await sendHubitatCommand(deviceId, 'heat');
+        console.log(`Setting AC ${deviceId} to HEAT @ 25°C`);
+        await sendHubitatCommand(deviceId, 'temp25');
       }
     } catch (err) {
       console.error(`Error controlling AC ${deviceId}:`, err);
@@ -7088,10 +7157,29 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// Setup listener delegado para toggle exclusivo de LED em Circulação
+function setupExclusiveLEDListener() {
+  const LED_QUENTE_ID = "55";
+  const LED_FRIO_ID = "54";
+  
+  // Listener delegado para elementos com data-device-id que correspondem aos LEDs
+  document.addEventListener("click", function(e) {
+    const el = e.target.closest("[data-device-id]");
+    if (!el) return;
+    
+    const deviceId = el.dataset.deviceId;
+    if (deviceId === LED_QUENTE_ID || deviceId === LED_FRIO_ID) {
+      // Usar toggle exclusivo para LEDs em Circulação
+      toggleExclusiveLED(el);
+    }
+  }, true);
+}
+
 // Exportar funções usadas em onclick="" no HTML (necessário para IIFE)
 window.toggleConfortoOptions = toggleConfortoOptions;
 window.handleConfortoAction = handleConfortoAction;
 window.toggleRoomControl = toggleRoomControl;
+window.toggleExclusiveLED = toggleExclusiveLED;
 window.togglePoolControl = togglePoolControl;
 window.fireTVMacro = fireTVMacro;
 window.htvMacroOn = htvMacroOn;

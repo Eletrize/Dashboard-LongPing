@@ -160,7 +160,7 @@ function getVisibleEnvironmentSceneList() {
   }
 
   return Object.entries(CLIENT_CONFIG.environments)
-    .filter(([, env]) => env?.visible !== false)
+    .filter(([key, env]) => env?.visible !== false && key !== 'ambiente10' && key !== 'ambiente11')
     .sort((a, b) => (a[1].order || 0) - (b[1].order || 0))
     .map(([key, env]) => ({ key, ...env }));
 }
@@ -186,27 +186,31 @@ function renderEnvironmentScenes() {
     .map((env) => {
       const elementId = `env-scene-${env.key}`;
       const sceneConfig = env.scene || {};
-      const icon = sceneConfig.icon || DEFAULT_ENV_SCENE_ICON;
+      const icon = sceneConfig.icon && sceneConfig.icon !== DEFAULT_ENV_SCENE_ICON ? sceneConfig.icon : '';
       const safeKey = sanitize(env.key);
       const originalName = env.name || env.key;
       const translatedName = typeof translateText === 'function' ? translateText(originalName) : originalName;
       const safeName = sanitize(translatedName);
-      const safeIcon = sanitize(icon);
+      const safeIcon = sanitize(icon || '');
       sceneToggleState[env.key] = sceneToggleState[env.key] || false;
 
       return `
         <div class="control-card large scene-control-card scene-toggle-card" id="${elementId}" data-env="${safeKey}" data-state="off">
           <div class="scene-toggle-card__top">
-            <img class="control-icon" src="images/icons/${safeIcon}" alt="${safeName}">
+            ${safeIcon ? `<img class="control-icon" src="images/icons/${safeIcon}" alt="${safeName}">` : ''}
             <div class="scene-toggle-card__info">
               <div class="control-label">${safeName}
               </div>
             </div>
           </div>
-          <button type="button" class="scene-toggle" aria-label="${tr('Alternar cenário de {envName}', { envName: safeName })}" data-env="${safeKey}" onclick="handleSceneToggle('${env.key}', '${elementId}')">
-            <span class="scene-toggle__track"></span>
-            <span class="scene-toggle__knob"></span>
-          </button>
+          <div class="scene-action-buttons">
+            <button type="button" class="scene-action-btn scene-action-btn--start" aria-label="${tr('Iniciar cenário de {envName}', { envName: safeName })}" data-env="${safeKey}" onclick="handleSceneToggle('${env.key}', '${elementId}', true)">
+              <img src="images/icons/icon-play.svg" alt="">
+            </button>
+            <button type="button" class="scene-action-btn scene-action-btn--stop" aria-label="${tr('Encerrar cenário de {envName}', { envName: safeName })}" data-env="${safeKey}" onclick="handleSceneToggle('${env.key}', '${elementId}', false)">
+              <img src="images/icons/icon-end.svg" alt="">
+            </button>
+          </div>
         </div>
       `;
     })
@@ -227,9 +231,9 @@ function handleEnvironmentScene(envKey, elementId) {
   showPopup(message, () => executeEnvironmentScene(envKey, elementId));
 }
 
-function handleSceneToggle(envKey, elementId) {
+function handleSceneToggle(envKey, elementId, targetState) {
   const currentState = Boolean(sceneToggleState[envKey]);
-  const nextState = !currentState;
+  const nextState = typeof targetState === 'boolean' ? targetState : !currentState;
   const envName = getEnvironmentDisplayName(envKey);
   const message = nextState
     ? tr('Ligar cenário "{envName}"? Isso irá ligar os principais dispositivos do ambiente.', { envName })
@@ -266,18 +270,33 @@ function confirmSceneToggle(envKey, elementId, targetState) {
     });
 }
 
-function setSceneToggleState(envKey, isOn) {
-  sceneToggleState[envKey] = Boolean(isOn);
-  const card = document.querySelector(`.scene-toggle-card[data-env="${envKey}"]`);
-  const toggle = card ? card.querySelector('.scene-toggle') : null;
+function syncSceneActionButtons(card, isOn) {
+  if (!card) return;
+  const startBtn = card.querySelector('.scene-action-btn--start');
+  const stopBtn = card.querySelector('.scene-action-btn--stop');
 
-  if (card) {
-    card.dataset.state = isOn ? 'on' : 'off';
-    card.classList.toggle('is-on', isOn);
+  if (startBtn) {
+    startBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    startBtn.classList.toggle('is-active', isOn);
   }
 
-  if (toggle) {
-    toggle.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+  if (stopBtn) {
+    const offActive = !isOn;
+    stopBtn.setAttribute('aria-pressed', offActive ? 'true' : 'false');
+    stopBtn.classList.toggle('is-active', offActive);
+  }
+}
+
+function setSceneToggleState(envKey, isOn) {
+  sceneToggleState[envKey] = Boolean(isOn);
+  const cards = document.querySelectorAll(`.scene-toggle-card[data-env="${envKey}"], .scene-toggle-card-slim[data-env="${envKey}"]`);
+
+  if (cards.length) {
+    cards.forEach((card) => {
+      card.dataset.state = isOn ? 'on' : 'off';
+      card.classList.toggle('is-on', isOn);
+      syncSceneActionButtons(card, isOn);
+    });
   }
 
   try {
@@ -383,6 +402,21 @@ function collectEnvironmentSceneCommands(envKey) {
 
   const add = (deviceId, command, label) => addCommandIfValid(commands, deviceId, command, label);
 
+  // Se há regras customizadas configuradas, usar apenas elas
+  if (env.sceneRules?.on) {
+    const rules = env.sceneRules.on;
+    if (Array.isArray(rules)) {
+      rules.forEach((rule) => {
+        if (rule.ruleId) {
+          commands.push({ rule: rule.ruleId, label: rule.label || `Regra ${rule.ruleId}` });
+        }
+      });
+    } else if (rules.ruleId) {
+      commands.push({ rule: rules.ruleId, label: rules.label || `Regra ${rules.ruleId}` });
+    }
+    return commands;
+  }
+
   (env.lights || []).forEach((light) => add(light.id, 'on', `Luz ${light.name || ''}`));
   (env.curtains || []).forEach((curtain) => add(curtain.id, 'open', `Cortina ${curtain.name || ''}`));
 
@@ -462,6 +496,21 @@ function collectEnvironmentSceneOffCommands(envKey) {
   const commands = [];
 
   const add = (deviceId, command, label) => addCommandIfValid(commands, deviceId, command, label);
+
+  // Se há regras customizadas configuradas, usar apenas elas
+  if (env.sceneRules?.off) {
+    const rules = env.sceneRules.off;
+    if (Array.isArray(rules)) {
+      rules.forEach((rule) => {
+        if (rule.ruleId) {
+          commands.push({ rule: rule.ruleId, label: rule.label || `Regra ${rule.ruleId}` });
+        }
+      });
+    } else if (rules.ruleId) {
+      commands.push({ rule: rules.ruleId, label: rules.label || `Regra ${rules.ruleId}` });
+    }
+    return commands;
+  }
 
   (env.lights || []).forEach((light) => add(light.id, 'off', `Luz ${light.name || ''}`));
   (env.curtains || []).forEach((curtain) => add(curtain.id, 'close', `Cortina ${curtain.name || ''}`));
@@ -564,7 +613,11 @@ function executeCommandsSequentially(commands, delayMs = 150) {
 
     let action;
 
-    if (entry.macro) {
+    if (entry.rule) {
+      // Executar regra do Hubitat via webhook/HTTP
+      console.log(`🎯 Executando regra Hubitat: ${entry.rule} (${entry.label || 'sem label'})`);
+      action = sendHubitatCommand(entry.rule, 'runRuleActions');
+    } else if (entry.macro) {
       if (typeof executeMacro === 'function') {
         action = executeMacro(entry.macro);
       } else {

@@ -463,7 +463,7 @@
       // 
       // DUAS FORMAS DE USAR:
       // 1. Imagem única: photoFilename: "Prologo.png" (coloque em images/Images/)
-      // 2. Versões otimizadas: photoFilename: "photo-varanda" (arquivos em images/optimized/)
+      // 2. Versões otimizadas: photoFilename: "photo-ambiente" (arquivos em images/optimized/)
       // ═══════════════════════════════════════════════════════════════════════════
 
       const ROOM_IMAGE_DATA = (() => {
@@ -494,8 +494,8 @@
               singleImage: true
             };
           } else {
-            // MODO 2: Versões otimizadas (ex: "photo-varanda")
-            // Procura arquivos como photo-varanda-480.webp, photo-varanda-720.webp, etc.
+            // MODO 2: Versões otimizadas (ex: "photo-ambiente")
+            // Procura arquivos como photo-ambiente-480.webp, photo-ambiente-720.webp, etc.
             const sortedWidths = [...RESPONSIVE_WIDTHS].sort((a, b) => a - b);
             const backgroundWidth = sortedWidths[sortedWidths.length - 1];
             const cardWidth = sortedWidths.find(w => w >= 720) || backgroundWidth;
@@ -697,15 +697,15 @@
         return scenesScriptPromise;
       }
 
-      function invokeSceneToggle(envKey, elementId) {
+      function invokeSceneToggle(envKey, elementId, targetState) {
         ensureScenesScript()
           .then(() => {
             if (typeof handleSceneToggle === 'function') {
-              handleSceneToggle(envKey, elementId);
-            } else if (typeof handleEnvironmentScene === 'function') {
+              handleSceneToggle(envKey, elementId, targetState);
+            } else if (typeof handleEnvironmentScene === 'function' && targetState !== false) {
               handleEnvironmentScene(envKey, elementId);
             } else {
-              console.warn('[scene] Nenhum handler de cena disponível');
+              console.warn('[scene] Nenhum handler de cena disponível', { envKey, targetState });
             }
           })
           .catch((error) => console.error('Erro ao carregar scenes.js', error));
@@ -722,12 +722,23 @@
       }
 
       function updatePresentationCardState(envKey, isOn) {
-        const card = document.querySelector(`.scene-toggle-card[data-env="${envKey}"]`);
-        if (!card) return;
-        card.dataset.state = isOn ? 'on' : 'off';
-        card.classList.toggle('is-on', isOn);
-        const toggle = card.querySelector('.scene-toggle');
-        if (toggle) toggle.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+        const cards = document.querySelectorAll(`.scene-toggle-card[data-env="${envKey}"], .scene-toggle-card-slim[data-env="${envKey}"]`);
+        if (!cards.length) return;
+        cards.forEach((card) => {
+          card.dataset.state = isOn ? 'on' : 'off';
+          card.classList.toggle('is-on', isOn);
+          const startBtn = card.querySelector('.scene-action-btn--start');
+          const stopBtn = card.querySelector('.scene-action-btn--stop');
+          if (startBtn) {
+            startBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+            startBtn.classList.toggle('is-active', isOn);
+          }
+          if (stopBtn) {
+            const offActive = !isOn;
+            stopBtn.setAttribute('aria-pressed', offActive ? 'true' : 'false');
+            stopBtn.classList.toggle('is-active', offActive);
+          }
+        });
       }
 
       window.addEventListener('sceneToggleStateChanged', (evt) => {
@@ -832,7 +843,7 @@
       // Features são genéricas (feature1, feature2, etc.)
       // Cada feature define: label (nome), icon (ícone), route (página de destino)
 
-      const MEDIA_FEATURE_ROUTES = ["tv", "htv", "musica", "telao"];
+      const MEDIA_FEATURE_ROUTES = ["tv", "musica", "telao"];
 
       function getEnvironmentFeatures(envKey) {
         if (typeof CLIENT_CONFIG === 'undefined' || !CLIENT_CONFIG.environments) {
@@ -935,10 +946,10 @@
           return feature;
         });
 
-        // Move cenário (Apresentação) to the first position, preserving others order
+        // Move cenário (Apresentação) to the last position, preserving others order
         const sceneFeatures = updatedFeatures.filter((f) => f.action === 'executeScene');
         const nonSceneFeatures = updatedFeatures.filter((f) => f.action !== 'executeScene');
-        const orderedFeatures = sceneFeatures.concat(nonSceneFeatures);
+        const orderedFeatures = nonSceneFeatures.concat(sceneFeatures);
 
         const hasManualMidiaButton = orderedFeatures.some((feature) => feature.route === 'midia');
         const mediaTargets = getMediaFeatures(envKey, orderedFeatures);
@@ -956,9 +967,14 @@
         }
 
         const isFullWidth = orderedFeatures.length === 1;
+        // Contar apenas botões que não são apresentação
+        const nonSceneCount = orderedFeatures.filter(f => f.action !== 'executeScene').length;
+        const hasOddCount = nonSceneCount > 1 && nonSceneCount % 2 !== 0;
 
-        return orderedFeatures.map(feature => {
-          const cardClass = isFullWidth ? 'control-card control-card--full-width' : 'control-card';
+        return orderedFeatures.map((feature, index) => {
+          const isScene = feature.action === 'executeScene';
+          const isLastNonScene = !isScene && hasOddCount && index === orderedFeatures.length - 1;
+          const cardClass = (isFullWidth || isLastNonScene) ? 'control-card control-card--full-width' : 'control-card';
           const isLightsFeature = feature.route === 'luzes';
           const lightIds = isLightsFeature ? (getEnvLightIds(envKey) || []) : [];
           
@@ -966,17 +982,19 @@
              const btnId = `scene-btn-${envKey}`;
              const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
              return `
-            <div class="${cardClass} scene-toggle-card" id="${btnId}" data-env="${envKey}" data-state="off">
-              <div class="scene-toggle-card__top">
-                <img class="control-icon" src="images/icons/${feature.icon}" alt="${label}">
-                <div class="scene-toggle-card__info">
-                  <div class="control-label">${label}</div>
-                </div>
+            <div class="scene-toggle-card-slim" id="${btnId}" data-env="${envKey}" data-state="off">
+              <div class="scene-toggle-card-slim__content">
+                <img class="scene-toggle-card-slim__icon" src="images/icons/${feature.icon}" alt="${label}">
+                <span class="scene-toggle-card-slim__label">${label}</span>
               </div>
-              <button type="button" class="scene-toggle" aria-label="${label}" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}')">
-                <span class="scene-toggle__track"></span>
-                <span class="scene-toggle__knob"></span>
-              </button>
+              <div class="scene-action-buttons scene-action-buttons--compact">
+                <button type="button" class="scene-action-btn scene-action-btn--start scene-action-btn--compact" aria-label="${label} - Iniciar" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}', true)">
+                  <img src="images/icons/icon-play.svg" alt="">
+                </button>
+                <button type="button" class="scene-action-btn scene-action-btn--stop scene-action-btn--compact" aria-label="${label} - Encerrar" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}', false)">
+                  <img src="images/icons/icon-end.svg" alt="">
+                </button>
+              </div>
             </div>
           `;
           }
@@ -1068,6 +1086,41 @@
         return normalized;
       }
 
+      // Fila de comandos verdadeiramente não-bloqueante
+      const mediaCommandQueue = [];
+      let isProcessingMediaCommand = false;
+      let mediaCommandTimeout = null;
+
+      function processMediaCommandQueue() {
+        if (isProcessingMediaCommand || mediaCommandQueue.length === 0) return;
+
+        isProcessingMediaCommand = true;
+        const { deviceIds, command, options } = mediaCommandQueue.shift();
+
+        // Dispara comandos em background sem aguardar
+        setTimeout(() => {
+          const hasValue = options && Object.prototype.hasOwnProperty.call(options, 'value');
+          deviceIds.forEach((deviceId) => {
+            if (hasValue) {
+              sendHubitatCommand(deviceId, command, options.value).catch(err => {
+                console.error(`[media-control] Falha ao enviar ${command} para ${deviceId}:`, err.message);
+              });
+            } else {
+              sendHubitatCommand(deviceId, command).catch(err => {
+                console.error(`[media-control] Falha ao enviar ${command} para ${deviceId}:`, err.message);
+              });
+            }
+          });
+          
+          isProcessingMediaCommand = false;
+          
+          // Processa próximo item da fila após pequeno delay
+          if (mediaCommandQueue.length > 0) {
+            mediaCommandTimeout = setTimeout(processMediaCommandQueue, 50);
+          }
+        }, 0);
+      }
+
       function dispatchMediaCommands(deviceIds, command, options) {
         if (!Array.isArray(deviceIds) || !deviceIds.length || !command) {
           return;
@@ -1078,26 +1131,76 @@
           return;
         }
 
-        const hasValue = options && Object.prototype.hasOwnProperty.call(options, 'value');
-
-        deviceIds.forEach((deviceId) => {
-          const commandPromise = hasValue
-            ? sendHubitatCommand(deviceId, command, options.value)
-            : sendHubitatCommand(deviceId, command);
-
-          commandPromise.catch((error) => {
-            console.error(`[media-control] Falha ao enviar comando ${command} para ${deviceId}`, error);
-          });
-        });
+        // Adiciona à fila
+        mediaCommandQueue.push({ deviceIds, command, options });
+        
+        // Processa de forma completamente não-bloqueante
+        if (!isProcessingMediaCommand) {
+          setTimeout(processMediaCommandQueue, 0);
+        }
       }
 
       const playbackPowerState = {};
       const playbackMuteState = {};
       const mediaDeviceStates = {};
 
-      function getPlaybackConfig(envKey) {
+      const yamahaVolumeEnvs = new Set(['ambiente3', 'ambiente6']);
+
+      function getPlaybackVolumeLimits(envKey) {
+        const isYamaha = yamahaVolumeEnvs.has(envKey);
+        return {
+          min: 0,
+          max: isYamaha ? 161 : 87,
+          defaultValue: isYamaha ? 80 : 75
+        };
+      }
+
+      // Zona de áudio por ambiente (para setZoneVolume/muteZone)
+      function getMediaZone(envKey) {
+        const map = {
+          ambiente1: 1, // Prólogo
+          ambiente4: 3, // Pesquisa
+          ambiente10: 4 // Descanso
+        };
+        return map[envKey] || null;
+      }
+
+      function getPlaybackConfigs(envKey) {
         const mediaConfig = getMediaControlConfig(envKey);
-        return mediaConfig?.playback || null;
+        if (!mediaConfig) return [];
+
+        if (Array.isArray(mediaConfig.playbackDevices) && mediaConfig.playbackDevices.length) {
+          return mediaConfig.playbackDevices
+            .filter(Boolean)
+            .map((cfg, idx) => ({
+              ...cfg,
+              key: cfg.key || `pb${idx + 1}`
+            }));
+        }
+
+        if (mediaConfig.playback) {
+          return [{ ...mediaConfig.playback, key: mediaConfig.playback.key || 'default' }];
+        }
+
+        return [];
+      }
+
+      function getPlaybackConfig(envKey) {
+        const configs = getPlaybackConfigs(envKey);
+        return configs[0] || null;
+      }
+
+      function getPlaybackConfigByKey(envKey, playbackKey) {
+        const key = playbackKey || 'default';
+        const configs = getPlaybackConfigs(envKey);
+        if (!configs.length) return null;
+        const match = configs.find((cfg) => (cfg.key || 'default') === key);
+        return match || configs[0];
+      }
+
+      function getPlaybackStateKey(envKey, playbackKey) {
+        const key = playbackKey || 'default';
+        return `${envKey}::${key}`;
       }
 
       function collectPlaybackPowerDevices(playbackConfig) {
@@ -1110,29 +1213,34 @@
           .filter(Boolean);
       }
 
-      function handlePlaybackPowerCommand(envKey, command) {
+      function handlePlaybackPowerCommand(envKey, command, playbackKey) {
         if (!command) return;
-        const playbackConfig = getPlaybackConfig(envKey);
-        const devices = collectPlaybackPowerDevices(playbackConfig);
-        const isTurningOn = command === 'on';
-
-        setPlaybackPowerState(envKey, isTurningOn);
-
-        if (!devices.length) {
-          console.warn('[media-control] Nenhum dispositivo configurado para ligar/desligar Player');
+        const playbackConfig = getPlaybackConfigByKey(envKey, playbackKey);
+        if (!playbackConfig) {
+          console.warn('[media-control] Playback config não encontrado');
           return;
         }
+        
+        // Atualiza UI imediatamente, SEM aguardar resposta
+        const isTurningOn = command === 'on';
+        setPlaybackPowerState(envKey, playbackKey, isTurningOn);
 
-        dispatchMediaCommands(devices, command);
+        // Envia comando em background (não aguarda)
+        setTimeout(() => {
+          const devices = collectPlaybackPowerDevices(playbackConfig);
+
+          if (!devices.length) {
+            console.warn('[media-control] Nenhum dispositivo configurado para ligar/desligar Player');
+            return;
+          }
+
+          dispatchMediaCommands(devices, command);
+        }, 0);
       }
 
-      function handlePlaybackTransportCommand(envKey, command) {
+      function handlePlaybackTransportCommand(envKey, command, playbackKey) {
         if (!command) return;
-        if (!playbackPowerState[envKey]) {
-          console.warn('[media-control] Player desligado - comando ignorado');
-          return;
-        }
-        const playbackConfig = getPlaybackConfig(envKey);
+        const playbackConfig = getPlaybackConfigByKey(envKey, playbackKey);
         const deviceId = normalizeMediaDeviceId(playbackConfig?.transportDeviceId);
 
         if (!deviceId) {
@@ -1140,14 +1248,20 @@
           return;
         }
 
-        updatePlaybackTransportUI(envKey, command);
+        // Atualiza UI imediatamente, mesmo com player "desligado" para não bloquear
+        updatePlaybackTransportUI(envKey, playbackKey, command);
 
-        dispatchMediaCommands([deviceId], command);
+        // Envia comando em background
+        setTimeout(() => {
+          dispatchMediaCommands([deviceId], command);
+        }, 0);
       }
 
-      function updatePlaybackTransportUI(envKey, activeCommand) {
+      function updatePlaybackTransportUI(envKey, playbackKey, activeCommand) {
         const selector = `.media-playback-transport button[data-env="${envKey}"][data-transport]`;
         document.querySelectorAll(selector).forEach((btn) => {
+          const btnPlaybackKey = btn.getAttribute('data-playback-key') || 'default';
+          if (btnPlaybackKey !== (playbackKey || 'default')) return;
           const isActive = activeCommand && btn.getAttribute('data-transport') === activeCommand;
           btn.classList.toggle('is-active', Boolean(isActive));
         });
@@ -1155,89 +1269,107 @@
 
       function handlePlaybackVolumeInput(rangeEl) {
         if (!rangeEl) return;
-        const percent = `${rangeEl.value}%`;
+        const max = Number(rangeEl.max || 100);
+        const value = Number(rangeEl.value || 0);
+        const percent = `${Math.min(100, Math.max(0, (value / max) * 100)).toFixed(0)}%`;
         rangeEl.style.setProperty('--playback-volume', percent);
       }
 
+      // Debounce para volume
+      const volumeChangeTimers = {};
+
       function handlePlaybackVolumeChange(rangeEl) {
         if (!rangeEl) return;
-        const deviceId = normalizeMediaDeviceId(rangeEl.dataset.deviceId);
         const envKey = rangeEl.dataset.env;
+        const playbackKey = rangeEl.dataset.playbackKey || 'default';
+        const playbackConfig = getPlaybackConfigByKey(envKey, playbackKey);
+        const deviceId = normalizeMediaDeviceId(rangeEl.dataset.deviceId || playbackConfig?.volumeDeviceId);
+        const zone = getMediaZone(envKey);
 
-        if (envKey && !playbackPowerState[envKey]) {
-          console.warn('[media-control] Player desligado - ajuste de volume ignorado');
-          return;
-        }
+        const { min: volMin, max: volMax } = getPlaybackVolumeLimits(envKey);
+        const isYamaha = yamahaVolumeEnvs.has(envKey);
+        const shouldUseZone = Boolean(zone) && !isYamaha;
 
         if (!deviceId) {
           console.warn('[media-control] Dispositivo de volume não configurado');
           return;
         }
 
-        const value = Math.max(0, Math.min(100, Number(rangeEl.value || 0)));
-        handlePlaybackVolumeInput(rangeEl);
-        if (envKey && playbackMuteState[envKey]) {
-          setPlaybackMuteState(envKey, false);
+        const stateKey = getPlaybackStateKey(envKey, playbackKey);
+
+        // Limpar timer anterior se existir
+        if (volumeChangeTimers[stateKey]) {
+          clearTimeout(volumeChangeTimers[stateKey]);
         }
-        dispatchMediaCommands([deviceId], 'setVolume', { value });
+
+        const rawValue = Number(rangeEl.value || 0);
+        const value = Math.max(volMin, Math.min(volMax, rawValue));
+        rangeEl.value = value;
+        handlePlaybackVolumeInput(rangeEl);
+        
+        if (envKey && playbackMuteState[stateKey]) {
+          setPlaybackMuteState(envKey, false, playbackKey);
+        }
+
+        // Debounce: aguarda 300ms sem alterações antes de enviar
+        volumeChangeTimers[stateKey] = setTimeout(() => {
+          if (shouldUseZone) {
+            const valueString = `${zone}/${value}`;
+            dispatchMediaCommands([deviceId], 'setZoneVolume', { value: valueString });
+          } else {
+            dispatchMediaCommands([deviceId], 'setVolume', { value });
+          }
+          volumeChangeTimers[stateKey] = null;
+        }, 300);
       }
 
-      function setPlaybackPowerState(envKey, isOn) {
-        playbackPowerState[envKey] = Boolean(isOn);
-        console.log(`[playback] setPlaybackPowerState(${envKey}, ${isOn})`);
-
+      function setPlaybackPowerState(envKey, playbackKey, isOn) {
+        const stateKey = getPlaybackStateKey(envKey, playbackKey);
+        playbackPowerState[stateKey] = Boolean(isOn);
+        
+        // Atualizar UI de forma instantânea (sem yield)
         const powerButtons = document.querySelectorAll(`.media-panel__action-btn[data-playback-power][data-env="${envKey}"]`);
-        console.log(`[playback] Found ${powerButtons.length} power buttons`);
         powerButtons.forEach((button) => {
+          const btnPlaybackKey = button.getAttribute('data-playback-key') || 'default';
+          if (btnPlaybackKey !== (playbackKey || 'default')) return;
           const buttonTargetsOn = button.dataset.playbackPower === 'on';
           button.classList.toggle('is-active', buttonTargetsOn === Boolean(isOn));
         });
 
         const transportButtons = document.querySelectorAll(`.media-playback-transport button[data-env="${envKey}"]`);
-        console.log(`[playback] Found ${transportButtons.length} transport buttons, isOn=${isOn}`);
         transportButtons.forEach((button) => {
+          const btnPlaybackKey = button.getAttribute('data-playback-key') || 'default';
+          if (btnPlaybackKey !== (playbackKey || 'default')) return;
           button.disabled = !isOn;
-          console.log(`[playback] Transport button disabled=${button.disabled}`);
         });
         if (!isOn) {
-          updatePlaybackTransportUI(envKey, null);
+          updatePlaybackTransportUI(envKey, playbackKey, null);
         }
 
-        const muteBtn = document.querySelector(`.media-playback-mute-btn[data-env="${envKey}"]`);
-        if (muteBtn) {
-          muteBtn.disabled = !isOn;
-          console.log(`[playback] Mute button: disabled=${muteBtn.disabled}`);
-        }
-
-        const slider = document.querySelector(`.media-playback-slider[data-env="${envKey}"]`);
-        if (slider) {
-          slider.disabled = !isOn;
-          console.log(`[playback] Slider: disabled=${slider.disabled}`);
-        }
-
-        const sliderWrapper = document.querySelector(`.media-playback-slider-wrapper[data-env="${envKey}"]`);
-        if (sliderWrapper) {
-          sliderWrapper.classList.toggle('is-disabled', !isOn);
-        }
+        // Não desabilitar outros controles; apenas marca estado visual
       }
 
-      function setPlaybackMuteState(envKey, muted) {
-        playbackMuteState[envKey] = muted;
+      function setPlaybackMuteState(envKey, muted, playbackKey) {
+        const stateKey = getPlaybackStateKey(envKey, playbackKey);
+        playbackMuteState[stateKey] = muted;
 
         if (envKey) {
-          const muteBtn = document.querySelector(`.media-playback-mute-btn[data-env="${envKey}"]`);
+          const muteBtn = document.querySelector(`.media-playback-mute-btn[data-env="${envKey}"][data-playback-key="${playbackKey || 'default'}"]`)
+            || document.querySelector(`.media-playback-mute-btn[data-env="${envKey}"]`);
           if (muteBtn) {
             muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
             muteBtn.classList.toggle('is-muted', Boolean(muted));
             muteBtn.setAttribute('aria-label', muted ? 'Desativar mute' : 'Ativar mute');
           }
 
-          const volumeContainer = document.querySelector(`.media-playback-volume[data-env="${envKey}"]`);
+          const volumeContainer = document.querySelector(`.media-playback-volume[data-env="${envKey}"][data-playback-key="${playbackKey || 'default'}"]`)
+            || document.querySelector(`.media-playback-volume[data-env="${envKey}"]`);
           if (volumeContainer) {
             volumeContainer.setAttribute('data-muted', muted ? 'true' : 'false');
           }
 
-          const slider = document.querySelector(`.media-playback-slider[data-env="${envKey}"]`);
+          const slider = document.querySelector(`.media-playback-slider[data-env="${envKey}"][data-playback-key="${playbackKey || 'default'}"]`)
+            || document.querySelector(`.media-playback-slider[data-env="${envKey}"]`);
           if (slider && muted) {
             if (!slider.dataset.volumeBeforeMute) {
               slider.dataset.volumeBeforeMute = slider.value;
@@ -1255,26 +1387,29 @@
       function handlePlaybackMuteToggle(buttonEl) {
         if (!buttonEl) return;
         const envKey = buttonEl.dataset.env;
+        const playbackKey = buttonEl.dataset.playbackKey || 'default';
+        const zone = getMediaZone(envKey);
 
-        if (envKey && !playbackPowerState[envKey]) {
-          console.warn('[media-control] Player desligado - mute ignorado');
-          return;
-        }
+        const stateKey = getPlaybackStateKey(envKey, playbackKey);
+        const nextMuted = !(envKey && playbackMuteState[stateKey]);
+        
+        // Atualiza UI imediatamente
+        setPlaybackMuteState(envKey, nextMuted, playbackKey);
 
-        const nextMuted = !(envKey && playbackMuteState[envKey]);
-        setPlaybackMuteState(envKey, nextMuted);
+        // Envia comando em background
+        setTimeout(() => {
+          const datasetId = buttonEl.dataset.deviceId;
+          const fallbackConfig = envKey ? getPlaybackConfigByKey(envKey, playbackKey) : null;
+          const deviceId = normalizeMediaDeviceId(datasetId || fallbackConfig?.volumeDeviceId);
 
-        const datasetId = buttonEl.dataset.deviceId;
-        const fallbackConfig = envKey ? getPlaybackConfig(envKey) : null;
-        const deviceId = normalizeMediaDeviceId(datasetId || fallbackConfig?.volumeDeviceId);
+          if (!deviceId || !zone) {
+            console.warn('[media-control] Dispositivo ou zona de mute não configurado - apenas UI atualizada');
+            return;
+          }
 
-        if (!deviceId) {
-          console.warn('[media-control] Dispositivo de mute não configurado - apenas UI atualizada');
-          return;
-        }
-
-        const command = nextMuted ? 'mute' : 'unmute';
-        dispatchMediaCommands([deviceId], command);
+          const command = nextMuted ? 'muteZone' : 'unmuteZone';
+          dispatchMediaCommands([deviceId], command, { value: `${zone}` });
+        }, 0);
       }
 
       function getDevicesForGroup(envKey, groupKey) {
@@ -1458,27 +1593,37 @@
           return '';
         }
 
-        if (playbackPowerState[envKey] === undefined) {
-          playbackPowerState[envKey] = false;
+        const playbackKey = playbackConfig.key || 'default';
+        const stateKey = getPlaybackStateKey(envKey, playbackKey);
+
+        if (playbackPowerState[stateKey] === undefined) {
+          playbackPowerState[stateKey] = false;
         }
 
         const safeEnvKey = escapeHtml(envKey);
-        const sectionId = `${envKey}-playback-section`;
+        const safePlaybackKey = escapeHtml(playbackKey);
+        const sectionId = `${envKey}-playback-${playbackKey}-section`;
         const powerDevices = collectPlaybackPowerDevices(playbackConfig);
         const hasPowerDevices = powerDevices.length > 0;
         const hasTransportDevice = Boolean(normalizeMediaDeviceId(playbackConfig.transportDeviceId));
         const volumeDeviceId = normalizeMediaDeviceId(playbackConfig.volumeDeviceId);
-        const isPowerOn = Boolean(playbackPowerState[envKey]);
+        const isPowerOn = Boolean(playbackPowerState[stateKey]);
 
-        const transportDisabledAttr = !isPowerOn ? ' disabled' : '';
-        const volumeDisabledAttr = !isPowerOn ? ' disabled' : '';
-        const muteDisabledAttr = !isPowerOn ? ' disabled' : '';
+        const { min: sliderMin, max: sliderMax, defaultValue: sliderDefault } = getPlaybackVolumeLimits(envKey);
+        const sliderPercent = Math.round((sliderDefault / sliderMax) * 100);
+
+        // Mantém controles sempre habilitados para não bloquear interação
+        const transportDisabledAttr = '';
+        const volumeDisabledAttr = '';
+        const muteDisabledAttr = '';
 
         const volumeAvailableAttr = 'true';
         const transportAvailableAttr = 'true';
-        const sliderWrapperDisabledClass = !isPowerOn ? ' is-disabled' : '';
+        const sliderWrapperDisabledClass = '';
 
-        const audioTitle = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
+        const audioTitle = typeof translateText === 'function'
+          ? translateText(playbackConfig.label || 'Mídia')
+          : (playbackConfig.label || 'Mídia');
         const connectedLabel = typeof translateText === 'function'
           ? translateText(isPowerOn ? 'Conectado' : 'Conectado')
           : 'Conectado';
@@ -1489,39 +1634,38 @@
         const offLabel = typeof translateText === 'function' ? translateText('Desligar') : 'Desligar';
 
         return `
-          <section class="media-panel__section media-panel__section--playback" data-group="playback">
+          <section class="media-panel__section media-panel__section--playback" data-group="playback-${safePlaybackKey}">
             <header class="media-panel__section-header">
               <div class="media-panel__section-headline">
                 <div class="media-panel__section-summary">
                   <img src="images/icons/icon-apresentacao.svg" alt="${audioTitle}" class="media-panel__section-icon">
                   <div class="media-panel__section-title">
                     <h2>${audioTitle}</h2>
-                    <p>1 ${connectedLabel}</p>
                   </div>
                 </div>
               </div>
               <div class="media-panel__actions media-panel__actions--stacked">
-                <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on')">${onLabel}</button>
-                <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off')">${offLabel}</button>
+                <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on', '${safePlaybackKey}')">${onLabel}</button>
+                <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off', '${safePlaybackKey}')">${offLabel}</button>
               </div>
             </header>
             <div class="media-panel__body is-open" data-section="${sectionId}">
               <div class="media-playback-controls">
                 <div class="media-playback-transport">
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport="play" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play')" aria-label="${playLabel}"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-transport="play" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'play', '${safePlaybackKey}')" aria-label="${playLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-play.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
-                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-transport="pause" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause')" aria-label="${pauseLabel}"${transportDisabledAttr}>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-transport="pause" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause', '${safePlaybackKey}')" aria-label="${pauseLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-pause.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
                 </div>
-                <div class="media-playback-volume" data-env="${safeEnvKey}">
-                  <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="${muteLabel}" aria-pressed="false"${muteDisabledAttr}>
+                <div class="media-playback-volume" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}">
+                  <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="${muteLabel}" aria-pressed="false"${muteDisabledAttr}>
                     <img src="images/icons/icon-volume.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--unmuted" aria-hidden="true">
                     <img src="images/icons/icon-mute.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--muted" aria-hidden="true">
                   </button>
-                  <div class="media-playback-slider-wrapper${sliderWrapperDisabledClass}" data-env="${safeEnvKey}" data-volume-available="${volumeAvailableAttr}">
-                    <input type="range" min="0" max="100" value="50" class="media-playback-slider" data-env="${safeEnvKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" oninput="handlePlaybackVolumeInput(this)" onchange="handlePlaybackVolumeChange(this)" style="--playback-volume:50%"${volumeDisabledAttr}>
+                  <div class="media-playback-slider-wrapper${sliderWrapperDisabledClass}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-volume-available="${volumeAvailableAttr}">
+                    <input type="range" min="${sliderMin}" max="${sliderMax}" value="${sliderDefault}" class="media-playback-slider" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" oninput="handlePlaybackVolumeInput(this)" onchange="handlePlaybackVolumeChange(this)" style="--playback-volume:${sliderPercent}%"${volumeDisabledAttr}>
                   </div>
                 </div>
               </div>
@@ -1571,8 +1715,9 @@
             })
           : '';
 
-        const playbackSection = controlConfig?.playback
-          ? renderPlaybackControlSection(envKey, controlConfig.playback)
+        const playbackConfigs = getPlaybackConfigs(envKey);
+        const playbackSection = playbackConfigs.length
+          ? playbackConfigs.map((cfg) => renderPlaybackControlSection(envKey, cfg)).join('')
           : '';
 
         return `
@@ -1647,33 +1792,32 @@
       const CURTAIN_SECTIONS = [
         {
           key: "ambiente1",
-          name: "Varanda",
-          curtains: [
-            { deviceId: "109", title: "Todas" },
-            { deviceId: "115", title: "Esquerda" },
-            { deviceId: "116", title: "Direita" },
-          ],
+          name: "Prólogo",
+          curtains: [],
         },
         {
           key: "ambiente2",
-          name: "Living",
-          curtains: [{ deviceId: "119", title: "Cortina Lateral" }],
-        },
-        {
-          key: "ambiente7",
-          name: "Suíte I",
-          curtains: [{ deviceId: "50", title: "Veneziana" }],
-        },
-        {
-          key: "ambiente8",
-          name: "Suíte II",
-          curtains: [{ deviceId: "51", title: "Veneziana" }],
+          name: "Circulação",
+          curtains: [
+            { deviceId: "50", title: "Cortina 1" },
+            { deviceId: "51", title: "Cortina 2" },
+            { deviceId: "52", title: "Cortina 3" },
+            { deviceId: "119", title: "Cortina 4" }
+          ],
         },
         {
           key: "ambiente9",
-          name: "Suíte Master",
-          curtains: [{ deviceId: "52", title: "Veneziana" }],
+          name: "Cultura",
+          curtains: [
+            { deviceId: "192", title: "Veneziana 1" },
+            { deviceId: "193", title: "Veneziana 2" }
+          ],
         },
+        {
+          key: "ambiente10",
+          name: "Descanso",
+          curtains: [{ deviceId: "194", title: "Veneziana" }],
+        }
       ];
 
       function renderCurtainControlCard(curtain, environment) {
@@ -2545,203 +2689,8 @@
 </div>
 
         `,
-
-        "ambiente1-htv": () => `
-
-    <div class="top-bar-custom"></div>
-
-    <div class="page active page-container ambiente1-page ambiente1-htv-page">
-
-      <div class="page-header">
-        <button class="back-btn" onclick="spaNavigate('ambiente1')">
-          <img src="images/icons/back-button.svg" alt="Voltar">
-        </button>
-        <h1 class="page-title">Controle TV</h1>
-      </div>
-
-      <div class="tv-control-wrapper">
-        
-        <!-- COLUNA 1 -->
-        <div class="tv-controls-col tv-col-1">
-          <!-- BLOCO 1: ON/OFF -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">On / Off</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-power-group">
-              <button class="tv-btn tv-btn--power-on" onclick="htvMacroOn()" aria-label="Ligar">
-                ON
-              </button>
-              <button class="tv-btn tv-btn--power-off" onclick="htvMacroOff()" aria-label="Desligar">
-                OFF
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOCO 4 E 5: VOLUME E CANAIS (lado a lado) -->
-          <div class="tv-volume-canais-wrapper">
-                
-            <!-- BLOCO 4: VOLUME -->
-            <div class="tv-control-section">
-              <header class="tv-section-header">
-                <h3 class="tv-section-title">Volume</h3>
-                <span class="tv-volume-value" id="tv-volume-display">50</span>
-                <div class="tv-section-line"></div>
-              </header>
-              <div class="tv-control-group tv-volume-slider-container">
-                <input 
-                  type="range" 
-                  class="tv-volume-slider" 
-                  id="tv-volume-slider"
-                  min="0" 
-                  max="100" 
-                  value="50"
-                  data-device-id="15"
-                  aria-label="Controle de Volume"
-                >
-              </div>
-            </div>
-
-            <!-- BLOCO 5: CANAIS -->
-            <div class="tv-control-section">
-              <header class="tv-section-header">
-                <h3 class="tv-section-title">Canais</h3>
-                <div class="tv-section-line"></div>
-              </header>
-              <div class="tv-control-group tv-volume-channels-inline">
-                        
-                <!-- Coluna Canais -->
-                <div class="tv-channels-column">
-                  <div class="tv-channels-buttons">
-            <button class="tv-btn-square" onclick="tvCommand(this, 'channelDown')" data-device-id="114" aria-label="Canal +">
-                      <img src="images/icons/arrow-up.svg" alt="Canal +" class="tv-btn-icon-img">
-                    </button>
-            <button class="tv-btn-square" onclick="tvCommand(this, 'channelUp')" data-device-id="114" aria-label="Canal -">
-                      <img src="images/icons/arrow-down.svg" alt="Canal -" class="tv-btn-icon-img">
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- COLUNA 2 -->
-        <div class="tv-controls-col tv-col-2">
-          <!-- BLOCO 3: COMANDOS (Back, Menu, Home, Mute) -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Comandos</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-commands-grid">
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'returnButton')" data-device-id="114" aria-label="Voltar">
-                <img src="images/icons/back-button.svg" alt="Voltar">
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'menu')" data-device-id="114" aria-label="Menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="3" y1="12" x2="21" y2="12"></line>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'volMute')" data-device-id="114" aria-label="Mudo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'home')" data-device-id="114" aria-label="Home">
-                <img src="images/icons/icon-home.svg" alt="Home">
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOCO 2: CONTROLE (D-PAD) -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Controle</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-directional-row">
-              <div class="tv-directional-section">
-                <div class="tv-directional-pad">
-                  <!-- Linha 1: UP -->
-                  <button class="tv-directional-btn tv-directional-btn--up" onclick="tvCommand(this, 'cursorUp')" data-device-id="114" aria-label="Cima">
-                    <img src="images/icons/arrow-up.svg" alt="Cima" class="tv-btn-icon-img">
-                  </button>
-                            
-                  <!-- Linha 2: LEFT, OK, RIGHT -->
-                  <div class="tv-directional-row-line">
-                    <button class="tv-directional-btn tv-directional-btn--left" onclick="tvCommand(this, 'cursorLeft')" data-device-id="114" aria-label="Esquerda">
-                      <img src="images/icons/arrow-left.svg" alt="Esquerda" class="tv-btn-icon-img">
-                    </button>
-                    <button class="tv-directional-btn tv-directional-btn--ok" onclick="tvCommand(this, 'cursorCenter')" data-device-id="114" aria-label="OK">
-                      <div class="tv-ok-circle"></div>
-                    </button>
-                    <button class="tv-directional-btn tv-directional-btn--right" onclick="tvCommand(this, 'cursorRight')" data-device-id="114" aria-label="Direita">
-                      <img src="images/icons/arrow-right.svg" alt="Direita" class="tv-btn-icon-img">
-                    </button>
-                  </div>
-                            
-                  <!-- Linha 3: DOWN -->
-                  <button class="tv-directional-btn tv-directional-btn--down" onclick="tvCommand(this, 'cursorDown')" data-device-id="114" aria-label="Baixo">
-                    <img src="images/icons/arrow-down.svg" alt="Baixo" class="tv-btn-icon-img">
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COLUNA 3 -->
-        <div class="tv-controls-col tv-col-3">
-          <!-- BLOCO 6: NÚMEROS -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Números</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group">
-              <div class="tv-numpad">
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num1')" data-device-id="114" aria-label="1">1</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num2')" data-device-id="114" aria-label="2">2</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num3')" data-device-id="114" aria-label="3">3</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num4')" data-device-id="114" aria-label="4">4</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num5')" data-device-id="114" aria-label="5">5</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num6')" data-device-id="114" aria-label="6">6</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num7')" data-device-id="114" aria-label="7">7</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num8')" data-device-id="114" aria-label="8">8</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num9')" data-device-id="114" aria-label="9">9</button>
-                <button class="tv-numpad-btn tv-numpad-btn--icon" onclick="tvCommand(this, 'returnButton')" data-device-id="114" aria-label="Voltar">
-                  <img src="images/icons/back-button.svg" alt="Back">
-                </button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num0')" data-device-id="114" aria-label="0">0</button>
-                <button class="tv-numpad-btn tv-numpad-btn--icon" onclick="tvCommand(this, 'mouse')" aria-label="Mouse">
-                  <img src="images/icons/icon-mouse.svg" alt="Mouse">
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- BLOCO 7: LOGO ELETRIZE -->
-          <div class="tv-control-section tv-logo-section">
-            <img src="images/icons/eletrize.svg" alt="Eletrize" class="tv-eletrize-logo">
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-        `,
-
         ambiente2: () => {
-          const envName = getTranslatedEnvName('ambiente2', 'Living');
+          const envName = getTranslatedEnvName('ambiente2', 'Circulação');
           return `
 <div class="top-bar-custom"></div>
 
@@ -2800,7 +2749,7 @@
     </div>
 
     <div class="ambiente2-cortinas-wrapper ambiente2-cortinas-grid">
-        <article class="curtain-tile curtain-tile--transparent" data-device-id="119" data-environment="Living">
+        <article class="curtain-tile curtain-tile--transparent" data-device-id="119" data-environment="Circulação">
             <header class="curtain-tile__header curtain-tile__header--minimal">
                 <h3 class="curtain-tile__title">Cortina Lateral</h3>
                 <div class="curtain-tile__line"></div>
@@ -2836,7 +2785,7 @@
     </div>
 
     <div class="ac-page-wrapper">
-        <main class="ac-container" data-component="ac-control" data-ac-living="true">
+        <main class="ac-container" data-component="ac-control" data-ac-circulacao="true">
             
             <!-- Display de Temperatura -->
             <section class="ac-temperature-section">
@@ -2875,13 +2824,13 @@
                 <section class="ac-modes" role="group" aria-label="Seleção de ar-condicionado">
                     <h2 class="ac-section-title">Seleção</h2>
                     <div class="ac-modes-grid ac-modes-grid--triple">
-                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="living1" aria-pressed="false" aria-label="AC I">
+                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="circulacao" aria-pressed="false" aria-label="AC I">
                             <span class="ac-mode-btn__label">I</span>
                         </button>
-                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="living2" aria-pressed="false" aria-label="AC II">
+                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="circulacao2" aria-pressed="false" aria-label="AC II">
                             <span class="ac-mode-btn__label">II</span>
                         </button>
-                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="livingBoth" aria-pressed="false" aria-label="Ambos ACs">
+                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="circulacaoBoth" aria-pressed="false" aria-label="Ambos ACs">
                             <span class="ac-mode-btn__label">Ambos</span>
                         </button>
                     </div>
@@ -2920,7 +2869,7 @@
         `,
 
         ambiente3: () => {
-          const envName = getTranslatedEnvName('ambiente3', 'Piscina');
+          const envName = getTranslatedEnvName('ambiente3', 'Imersão');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3056,8 +3005,8 @@
                 <section class="ac-modes" role="group" aria-label="Seleção de ar-condicionado">
                     <h2 class="ac-section-title">Seleção</h2>
                     <div class="ac-modes-grid ac-modes-grid--single">
-                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="varanda" aria-pressed="true" aria-label="Varanda">
-                            <span class="ac-mode-btn__label">Varanda</span>
+                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="imersao" aria-pressed="true" aria-label="Imersão">
+                            <span class="ac-mode-btn__label">Imersão</span>
                         </button>
                     </div>
                 </section>
@@ -3566,7 +3515,7 @@
         `,
 
         ambiente5: () => {
-          const envName = getTranslatedEnvName('ambiente5', 'Serviço');
+          const envName = getTranslatedEnvName('ambiente5', 'Brasil');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3591,7 +3540,7 @@
         },
 
         ambiente1: () => {
-          const envName = getTranslatedEnvName('ambiente1', 'Varanda');
+          const envName = getTranslatedEnvName('ambiente1', 'Prólogo');
           return `
 <div class="top-bar-custom"></div>
 
@@ -3650,7 +3599,7 @@
     </div>
 
     <div class="ambiente1-cortinas-wrapper ambiente1-cortinas-grid">
-        <article class="curtain-tile curtain-tile--transparent" data-device-id="109" data-environment="Varanda">
+        <article class="curtain-tile curtain-tile--transparent" data-device-id="109" data-environment="Prólogo">
             <header class="curtain-tile__header curtain-tile__header--minimal">
                 <h3 class="curtain-tile__title">Todas</h3>
                 <div class="curtain-tile__line"></div>
@@ -3668,7 +3617,7 @@
             </div>
         </article>
 
-        <article class="curtain-tile curtain-tile--transparent" data-device-id="115" data-environment="Varanda">
+        <article class="curtain-tile curtain-tile--transparent" data-device-id="115" data-environment="Prólogo">
             <header class="curtain-tile__header curtain-tile__header--minimal">
                 <h3 class="curtain-tile__title">Esquerda</h3>
                 <div class="curtain-tile__line"></div>
@@ -3686,7 +3635,7 @@
             </div>
         </article>
 
-        <article class="curtain-tile curtain-tile--transparent" data-device-id="116" data-environment="Varanda">
+        <article class="curtain-tile curtain-tile--transparent" data-device-id="116" data-environment="Prólogo">
             <header class="curtain-tile__header curtain-tile__header--minimal">
                 <h3 class="curtain-tile__title">Direita</h3>
                 <div class="curtain-tile__line"></div>
@@ -3761,8 +3710,8 @@
                 <section class="ac-modes" role="group" aria-label="Seleção de ar-condicionado">
                     <h2 class="ac-section-title">Seleção</h2>
                     <div class="ac-modes-grid ac-modes-grid--single">
-                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="varanda" aria-pressed="true" aria-label="Varanda">
-                            <span class="ac-mode-btn__label">Varanda</span>
+                        <button type="button" class="ac-mode-btn ac-mode-btn--selection" data-mode-button data-mode="prologo" aria-pressed="true" aria-label="Prólogo">
+                            <span class="ac-mode-btn__label">Prólogo</span>
                         </button>
                     </div>
                 </section>
@@ -3844,7 +3793,7 @@
     <div class="ambiente3-piscina-wrapper">
         <div class="piscina-control-grid">
             <!-- Cascata -->
-            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="152" data-environment="Piscina">
+            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="152" data-environment="Imersão">
                 <header class="curtain-tile__header curtain-tile__header--minimal">
                     <h3 class="curtain-tile__title">Cascata</h3>
                     <div class="curtain-tile__line"></div>
@@ -3860,7 +3809,7 @@
             </article>
 
             <!-- Hidromassagem -->
-            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="153" data-environment="Piscina">
+            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="153" data-environment="Imersão">
                 <header class="curtain-tile__header curtain-tile__header--minimal">
                     <h3 class="curtain-tile__title">Hidromassagem</h3>
                     <div class="curtain-tile__line"></div>
@@ -3876,7 +3825,7 @@
             </article>
 
             <!-- Deck -->
-            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="161" data-environment="Piscina">
+            <article class="curtain-tile curtain-tile--transparent piscina-switch-tile" data-device-id="161" data-environment="Imersão">
                 <header class="curtain-tile__header curtain-tile__header--minimal">
                     <h3 class="curtain-tile__title">Deck</h3>
                     <div class="curtain-tile__line"></div>
@@ -3894,7 +3843,7 @@
 
         <div class="piscina-secondary-row">
             <!-- Toldo -->
-            <article class="curtain-tile curtain-tile--transparent piscina-toldo-tile" data-device-id="162" data-environment="Piscina">
+            <article class="curtain-tile curtain-tile--transparent piscina-toldo-tile" data-device-id="162" data-environment="Imersão">
                 <header class="curtain-tile__header curtain-tile__header--minimal">
                     <h3 class="curtain-tile__title">Toldo</h3>
                     <div class="curtain-tile__line"></div>
@@ -4119,7 +4068,7 @@
         `,
 
         ambiente4: () => {
-          const envName = getTranslatedEnvName('ambiente4', 'Externa');
+          const envName = getTranslatedEnvName('ambiente4', 'Pesquisa');
           return `
 <div class="top-bar-custom"></div>
 
@@ -4144,7 +4093,7 @@
         },
 
         ambiente6: () => {
-          const envName = getTranslatedEnvName('ambiente6', 'Circulação');
+          const envName = getTranslatedEnvName('ambiente6', 'Maquete');
           return `
 <div class="top-bar-custom"></div>
 
@@ -4169,7 +4118,7 @@
         },
 
         ambiente7: () => {
-          const envName = getTranslatedEnvName('ambiente7', 'Suíte I');
+          const envName = getTranslatedEnvName('ambiente7', 'Holograma');
           return `
 <div class="top-bar-custom"></div>
 
@@ -4535,203 +4484,8 @@
 </div>
 
         `,
-
-        "ambiente7-htv": () => `
-
-    <div class="top-bar-custom"></div>
-
-    <div class="page active page-container ambiente7-page ambiente7-htv-page">
-
-      <div class="page-header">
-        <button class="back-btn" onclick="spaNavigate('ambiente7')">
-          <img src="images/icons/back-button.svg" alt="Voltar">
-        </button>
-        <h1 class="page-title">Controle TV</h1>
-      </div>
-
-      <div class="tv-control-wrapper">
-        
-        <!-- COLUNA 1 -->
-        <div class="tv-controls-col tv-col-1">
-          <!-- BLOCO 1: ON/OFF -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">On / Off</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-power-group">
-              <button class="tv-btn tv-btn--power-on" onclick="suite1HtvOn()" aria-label="Ligar">
-                ON
-              </button>
-              <button class="tv-btn tv-btn--power-off" onclick="suite1HtvOff()" aria-label="Desligar">
-                OFF
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOCO 4 E 5: VOLUME E CANAIS (lado a lado) -->
-          <div class="tv-volume-canais-wrapper">
-                
-            <!-- BLOCO 4: VOLUME -->
-            <div class="tv-control-section">
-              <header class="tv-section-header">
-                <h3 class="tv-section-title">Volume</h3>
-                <span class="tv-volume-value" id="tv-volume-display">50</span>
-                <div class="tv-section-line"></div>
-              </header>
-              <div class="tv-control-group tv-volume-slider-container">
-                <input 
-                  type="range" 
-                  class="tv-volume-slider" 
-                  id="tv-volume-slider"
-                  min="0" 
-                  max="100" 
-                  value="50"
-                  data-device-id="190"
-                  aria-label="Controle de Volume"
-                >
-              </div>
-            </div>
-
-            <!-- BLOCO 5: CANAIS -->
-            <div class="tv-control-section">
-              <header class="tv-section-header">
-                <h3 class="tv-section-title">Canais</h3>
-                <div class="tv-section-line"></div>
-              </header>
-              <div class="tv-control-group tv-volume-channels-inline">
-                        
-                <!-- Coluna Canais -->
-                <div class="tv-channels-column">
-                  <div class="tv-channels-buttons">
-            <button class="tv-btn-square" onclick="tvCommand(this, 'channelDown')" data-device-id="190" aria-label="Canal +">
-                      <img src="images/icons/arrow-up.svg" alt="Canal +" class="tv-btn-icon-img">
-                    </button>
-            <button class="tv-btn-square" onclick="tvCommand(this, 'channelUp')" data-device-id="190" aria-label="Canal -">
-                      <img src="images/icons/arrow-down.svg" alt="Canal -" class="tv-btn-icon-img">
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- COLUNA 2 -->
-        <div class="tv-controls-col tv-col-2">
-          <!-- BLOCO 3: COMANDOS (Back, Menu, Home, Mute) -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Comandos</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-commands-grid">
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'returnButton')" data-device-id="190" aria-label="Voltar">
-                <img src="images/icons/back-button.svg" alt="Voltar">
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'menu')" data-device-id="190" aria-label="Menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="3" y1="12" x2="21" y2="12"></line>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'volMute')" data-device-id="190" aria-label="Mudo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <line x1="23" y1="9" x2="17" y2="15"></line>
-                  <line x1="17" y1="9" x2="23" y2="15"></line>
-                </svg>
-              </button>
-              <button class="tv-btn tv-btn--icon-only" onclick="tvCommand(this, 'home')" data-device-id="190" aria-label="Home">
-                <img src="images/icons/icon-home.svg" alt="Home">
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOCO 2: CONTROLE (D-PAD) -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Controle</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group tv-directional-row">
-              <div class="tv-directional-section">
-                <div class="tv-directional-pad">
-                  <!-- Linha 1: UP -->
-                  <button class="tv-directional-btn tv-directional-btn--up" onclick="tvCommand(this, 'cursorUp')" data-device-id="190" aria-label="Cima">
-                    <img src="images/icons/arrow-up.svg" alt="Cima" class="tv-btn-icon-img">
-                  </button>
-                            
-                  <!-- Linha 2: LEFT, OK, RIGHT -->
-                  <div class="tv-directional-row-line">
-                    <button class="tv-directional-btn tv-directional-btn--left" onclick="tvCommand(this, 'cursorLeft')" data-device-id="190" aria-label="Esquerda">
-                      <img src="images/icons/arrow-left.svg" alt="Esquerda" class="tv-btn-icon-img">
-                    </button>
-                    <button class="tv-directional-btn tv-directional-btn--ok" onclick="tvCommand(this, 'cursorCenter')" data-device-id="190" aria-label="OK">
-                      <div class="tv-ok-circle"></div>
-                    </button>
-                    <button class="tv-directional-btn tv-directional-btn--right" onclick="tvCommand(this, 'cursorRight')" data-device-id="190" aria-label="Direita">
-                      <img src="images/icons/arrow-right.svg" alt="Direita" class="tv-btn-icon-img">
-                    </button>
-                  </div>
-                            
-                  <!-- Linha 3: DOWN -->
-                  <button class="tv-directional-btn tv-directional-btn--down" onclick="tvCommand(this, 'cursorDown')" data-device-id="190" aria-label="Baixo">
-                    <img src="images/icons/arrow-down.svg" alt="Baixo" class="tv-btn-icon-img">
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COLUNA 3 -->
-        <div class="tv-controls-col tv-col-3">
-          <!-- BLOCO 6: NÚMEROS -->
-          <div class="tv-control-section">
-            <header class="tv-section-header">
-              <h3 class="tv-section-title">Números</h3>
-              <div class="tv-section-line"></div>
-            </header>
-            <div class="tv-control-group">
-              <div class="tv-numpad">
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num1')" data-device-id="190" aria-label="1">1</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num2')" data-device-id="190" aria-label="2">2</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num3')" data-device-id="190" aria-label="3">3</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num4')" data-device-id="190" aria-label="4">4</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num5')" data-device-id="190" aria-label="5">5</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num6')" data-device-id="190" aria-label="6">6</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num7')" data-device-id="190" aria-label="7">7</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num8')" data-device-id="190" aria-label="8">8</button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num9')" data-device-id="190" aria-label="9">9</button>
-                <button class="tv-numpad-btn tv-numpad-btn--icon" onclick="tvCommand(this, 'returnButton')" data-device-id="190" aria-label="Voltar">
-                  <img src="images/icons/back-button.svg" alt="Back">
-                </button>
-                <button class="tv-numpad-btn" onclick="tvCommand(this, 'num0')" data-device-id="190" aria-label="0">0</button>
-                <button class="tv-numpad-btn tv-numpad-btn--icon" onclick="tvCommand(this, 'mouse')" aria-label="Mouse">
-                  <img src="images/icons/icon-mouse.svg" alt="Mouse">
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- BLOCO 7: LOGO ELETRIZE -->
-          <div class="tv-control-section tv-logo-section">
-            <img src="images/icons/eletrize.svg" alt="Eletrize" class="tv-eletrize-logo">
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-        `,
-
         ambiente8: () => {
-          const envName = getTranslatedEnvName('ambiente8', 'Suíte II');
+          const envName = getTranslatedEnvName('ambiente8', 'Processos');
           return `
 <div class="top-bar-custom"></div>
 
@@ -5293,7 +5047,7 @@
         `,
 
         ambiente9: () => {
-          const envName = getTranslatedEnvName('ambiente9', 'Suíte Master');
+          const envName = getTranslatedEnvName('ambiente9', 'Cultura');
           return `
 <div class="top-bar-custom"></div>
 
@@ -5857,6 +5611,52 @@
 
         `,
 
+        ambiente10: () => {
+          const envName = getTranslatedEnvName('ambiente10', 'Descanso');
+          return `
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container ambiente10-page">
+
+    <div class="page-header">
+
+        <button class="back-btn" onclick="spaNavigate('home')"><img src="images/icons/back-button.svg" alt="Voltar"></button>
+
+        <h1 class="page-title">${envName}</h1>
+
+    </div>
+
+    
+
+    <div class="ambiente10-controls-wrapper ambiente-grid">
+        ${generateFeatureButtons('ambiente10')}
+    </div>
+
+</div>
+          `;
+        },
+
+        "ambiente10-luzes": () => `
+
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container ambiente10-page ambiente10-luzes-page">
+
+    <div class="page-header">
+        <button class="back-btn" onclick="spaNavigate('ambiente10')">
+            <img src="images/icons/back-button.svg" alt="Voltar">
+        </button>
+        <h1 class="page-title">Iluminação</h1>
+    </div>
+
+    <div class="ambiente10-luzes-wrapper ambiente-grid">
+      <!-- Luzes geradas dinamicamente pelo config.js -->
+    </div>
+
+</div>
+
+        `,
+
         ambiente11: () => {
           const envName = getTranslatedEnvName('ambiente11', 'Banheiros');
           return `
@@ -5912,15 +5712,17 @@
       const ENVIRONMENT_LABELS = (typeof getEnvironmentLabels === 'function') 
         ? getEnvironmentLabels() 
         : {
-            ambiente1: "Varanda",
-            ambiente2: "Living",
-            ambiente3: "Piscina",
-            ambiente4: "Externa",
-            ambiente5: "Servi\u00e7o",
-            ambiente6: "Circula\u00e7\u00e3o",
-            ambiente7: "Su\u00edte I",
-            ambiente8: "Su\u00edte II",
-            ambiente9: "Su\u00edte Master",
+            ambiente1: "Pr\u00f3logo",
+            ambiente2: "Circula\u00e7\u00e3o",
+            ambiente3: "Imers\u00e3o",
+            ambiente4: "Pesquisa",
+            ambiente5: "Brasil",
+            ambiente6: "Maquete",
+            ambiente7: "Holograma",
+            ambiente8: "Processos",
+            ambiente9: "Cultura",
+            ambiente10: "Descanso",
+            ambiente11: "Banheiros",
           };
 
       const PAGE_SUFFIX_LABELS = {
@@ -5930,7 +5732,6 @@
         conforto: "Conforto",
         musica: "M\u00fasica",
         tv: "Controle TV",
-        htv: "Controle HTV",
         piscina: "Piscina",
         midia: "M\u00eddia",
         "piscina-luzes": "Ilumina\u00e7\u00e3o",
@@ -6019,7 +5820,7 @@
         setupAppInfoMenu();
 
         // Inicializar slider de volume se estiver na página de TV
-        if (page === "ambiente1-tv" || page === "ambiente1-htv") {
+        if (page === "ambiente1-tv") {
           setTimeout(() => {
             if (typeof initVolumeSlider === "function") {
               initVolumeSlider();
@@ -6047,26 +5848,30 @@
             } else {
               // Fallback para dados hardcoded
               rooms = [
-                { name: "Varanda", route: "ambiente1" },
-                { name: "Living", route: "ambiente2" },
-                { name: "Piscina", route: "ambiente3" },
-                { name: "Externa", route: "ambiente4" },
-                { name: "Serviço", route: "ambiente5" },
-                { name: "Circulação", route: "ambiente6" },
-                { name: "Suíte I", route: "ambiente7" },
-                { name: "Suíte II", route: "ambiente8" },
-                { name: "Suíte Master", route: "ambiente9" },
+                { name: "Prólogo", route: "ambiente1" },
+                { name: "Circulação", route: "ambiente2" },
+                { name: "Imersão", route: "ambiente3" },
+                { name: "Pesquisa", route: "ambiente4" },
+                { name: "Brasil", route: "ambiente5" },
+                { name: "Maquete", route: "ambiente6" },
+                { name: "Holograma", route: "ambiente7" },
+                { name: "Processos", route: "ambiente8" },
+                { name: "Cultura", route: "ambiente9" },
+                { name: "Descanso", route: "ambiente10" },
+                { name: "Banheiros", route: "ambiente11" },
               ];
               roomDevices = {
-                ambiente1: ["44", "95", "96", "41", "45", "40", "31"],
-                ambiente2: ["57", "61", "75", "76", "49", "58", "20"],
-                ambiente3: ["35", "36", "37", "42"],
-                ambiente4: ["70", "66", "59", "65", "77", "37"],
-                ambiente5: ["38"],
-                ambiente6: ["81", "82"],
+                ambiente1: ["52", "58", "67"],
+                ambiente2: ["62"],
+                ambiente3: [],
+                ambiente4: ["60"],
+                ambiente5: ["64", "61"],
+                ambiente6: ["40", "44"],
                 ambiente7: [],
-                ambiente8: [],
-                ambiente9: [],
+                ambiente8: ["40", "44"],
+                ambiente9: ["45", "43", "57", "63", "59"],
+                ambiente10: ["42", "41", "65", "66"],
+                ambiente11: ["49", "47", "48", "46", "50"],
               };
             }
 
@@ -6217,12 +6022,8 @@
           }, 100);
         }
 
-        // Inicializa player de música na página de música da varanda
-        if (
-          ["ambiente1-musica", "ambiente2-musica", "ambiente3-musica"].includes(
-            page
-          )
-        ) {
+        // Inicializa player de música em páginas de música (qualquer ambiente)
+        if (page.endsWith('-musica')) {
           setTimeout(() => {
             if (typeof initMusicPlayerUI === "function") {
               initMusicPlayerUI();
