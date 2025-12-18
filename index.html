@@ -6045,6 +6045,15 @@
 
         setupAppInfoMenu();
 
+        // Inicializar UI de música ao entrar em páginas *-musica (SPA)
+        if (page.includes("musica")) {
+          setTimeout(() => {
+            if (typeof initMusicPlayerUI === "function") {
+              initMusicPlayerUI();
+            }
+          }, 100);
+        }
+
         // Inicializar slider de volume se estiver na página de TV
         if (page === "ambiente1-tv") {
           setTimeout(() => {

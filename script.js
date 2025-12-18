@@ -6296,6 +6296,18 @@ function initMusicPlayerUI() {
     return;
   }
 
+  const activePage = document.querySelector(".page.active");
+  if (
+    activePage &&
+    activePage.dataset &&
+    activePage.dataset.musicUiInitialized === "true"
+  ) {
+    return;
+  }
+  if (activePage && activePage.dataset) {
+    activePage.dataset.musicUiInitialized = "true";
+  }
+
   const playToggleBtn = queryActiveMusic("#music-play-toggle");
   const playTogglePlayIcon = playToggleBtn
     ? playToggleBtn.querySelector(".music-play-toggle__icon--play")
