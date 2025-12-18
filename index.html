@@ -989,15 +989,13 @@
              const btnId = `scene-btn-${envKey}`;
              const label = typeof translateText === 'function' ? translateText(feature.label) : feature.label;
              return `
-            <div class="scene-toggle-card-slim" id="${btnId}" data-env="${envKey}" data-state="off">
+            <div class="scene-toggle-card-slim scene-toggle-card-slim--single" id="${btnId}" data-env="${envKey}" data-state="off"
+              role="button" tabindex="0"
+              onclick="invokeSceneToggle('${envKey}', '${btnId}', true)"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();invokeSceneToggle('${envKey}','${btnId}',true);}">
               <div class="scene-toggle-card-slim__content">
                 <img class="scene-toggle-card-slim__icon" src="images/icons/${feature.icon}" alt="${label}">
                 <span class="scene-toggle-card-slim__label" style="white-space:normal; line-height:1.2;">${label}</span>
-              </div>
-              <div class="scene-action-buttons scene-action-buttons--compact">
-                <button type="button" class="scene-action-btn scene-action-btn--start scene-action-btn--compact" aria-label="${label} - Iniciar" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}', true)">
-                  <img src="images/icons/icon-play.svg" alt="">
-                </button>
               </div>
             </div>
           `;
