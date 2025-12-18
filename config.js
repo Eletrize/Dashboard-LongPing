@@ -607,7 +607,8 @@ const CLIENT_CONFIG = {
                     { id: "128", name: "Processo Esquerda"}
                 ],
                 computers: [
-                    { id: "", name: "Computador" }
+                    { id: "", name: "Computador Esquerda" },
+                    { id: "", name: "Computador Direita" }
                 ],
                 playbackDevices: [
                     {
