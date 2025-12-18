@@ -932,17 +932,26 @@
           return '<!-- nenhuma feature habilitada -->';
         }
 
-        // Normalize cenário feature: rename to "Apresentação", set icon, and keep action
-        const updatedFeatures = features.map((feature) => {
-          if (feature.action === 'executeScene') {
-            return {
-              ...feature,
-              label: 'Apresentação',
-              icon: 'icon-apresentacao.svg'
-            };
-          }
-          return feature;
-        });
+        const SCENE_ALLOWED_ENVS = new Set(["ambiente3", "ambiente6"]); // Imersão, Maquete
+
+        // Normalize cenário feature: rename to "Preparar Apresentação", set icon, and keep action
+        const updatedFeatures = features
+          .map((feature) => {
+            if (feature.action === 'executeScene') {
+              return {
+                ...feature,
+                label: 'Preparar Apresentação',
+                icon: 'icon-play.svg'
+              };
+            }
+            return feature;
+          })
+          .filter((feature) => {
+            if (feature.action === 'executeScene' && !SCENE_ALLOWED_ENVS.has(envKey)) {
+              return false; // remover botão de apresentação nos demais ambientes
+            }
+            return true;
+          });
 
         // Move cenário (Apresentação) to the last position, preserving others order
         const sceneFeatures = updatedFeatures.filter((f) => f.action === 'executeScene');
@@ -983,14 +992,11 @@
             <div class="scene-toggle-card-slim" id="${btnId}" data-env="${envKey}" data-state="off">
               <div class="scene-toggle-card-slim__content">
                 <img class="scene-toggle-card-slim__icon" src="images/icons/${feature.icon}" alt="${label}">
-                <span class="scene-toggle-card-slim__label">${label}</span>
+                <span class="scene-toggle-card-slim__label" style="white-space:normal; line-height:1.2;">${label}</span>
               </div>
               <div class="scene-action-buttons scene-action-buttons--compact">
                 <button type="button" class="scene-action-btn scene-action-btn--start scene-action-btn--compact" aria-label="${label} - Iniciar" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}', true)">
                   <img src="images/icons/icon-play.svg" alt="">
-                </button>
-                <button type="button" class="scene-action-btn scene-action-btn--stop scene-action-btn--compact" aria-label="${label} - Encerrar" data-env="${envKey}" onclick="invokeSceneToggle('${envKey}', '${btnId}', false)">
-                  <img src="images/icons/icon-end.svg" alt="">
                 </button>
               </div>
             </div>
