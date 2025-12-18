@@ -219,7 +219,7 @@ const CLIENT_CONFIG = {
                     { id: "69", name: "Telão Entrada" }
                 ],
                 computers: [
-                    { id: "", name: "Computador" }
+                    { id: "184", name: "Computador" }
                 ],
                 playback: {
                     powerDevices: [],
@@ -333,7 +333,7 @@ const CLIENT_CONFIG = {
                 ],
                 televisions: [],
                 computers: [
-                    { id: "", name: "Computador" }
+                    { id: "214", name: "Computador" }
                 ],
                 playback: {
                     powerDevices: ["16"],
@@ -384,7 +384,7 @@ const CLIENT_CONFIG = {
                     { id: "121", name: "Televisão 1", description: "Smart TV principal" }
                 ],
                 computers: [
-                    { id: "", name: "Computador" }
+                    { id: "210", name: "Computador" }
                 ],
                 playback: {
                     powerDevices: [],
@@ -500,8 +500,8 @@ const CLIENT_CONFIG = {
                     { id: "", name: "Televisão 2"}
                 ],
                 computers: [
-                    { id: "", name: "Mapa" },
-                    { id: "", name: "Parede" }
+                    { id: "220", name: "Mapa" },
+                    { id: "221", name: "Parede" }
                 ],
                 playback: {
                     powerDevices: [],
@@ -607,8 +607,8 @@ const CLIENT_CONFIG = {
                     { id: "128", name: "Processo Esquerda"}
                 ],
                 computers: [
-                    { id: "", name: "Computador Esquerda" },
-                    { id: "", name: "Computador Direita" }
+                    { id: "211", name: "Computador Esquerda" },
+                    { id: "212", name: "Computador Direita" }
                 ],
                 playbackDevices: [
                     {
@@ -724,6 +724,9 @@ const CLIENT_CONFIG = {
                 projectors: [],
                 televisions: [
                     { id: "124", name: "TV", description: "Televisão principal" }
+                ],
+                computers: [
+                    { id: "213", name: "Computador" }
                 ],
                 playback: {
                     powerDevices: [],
