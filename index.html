@@ -1159,7 +1159,7 @@
         const isYamaha = yamahaVolumeEnvs.has(envKey);
         return {
           min: 0,
-          max: isYamaha ? 161 : 87,
+          max: isYamaha ? 161 : 100,
           defaultValue: isYamaha ? 80 : 75
         };
       }
@@ -1294,11 +1294,8 @@
         const playbackKey = rangeEl.dataset.playbackKey || 'default';
         const playbackConfig = getPlaybackConfigByKey(envKey, playbackKey);
         const deviceIds = normalizeMediaDeviceIds(rangeEl.dataset.deviceId || playbackConfig?.volumeDeviceId);
-        const zone = getMediaZone(envKey);
-
         const { min: volMin, max: volMax } = getPlaybackVolumeLimits(envKey);
         const isYamaha = yamahaVolumeEnvs.has(envKey);
-        const shouldUseZone = Boolean(zone) && !isYamaha;
 
         if (!deviceIds.length) {
           console.warn('[media-control] Dispositivo de volume não configurado');
@@ -1323,13 +1320,8 @@
 
         // Debounce: aguarda 300ms sem alterações antes de enviar
         volumeChangeTimers[stateKey] = setTimeout(() => {
-          if (envKey === 'ambiente1') {
-            dispatchMediaCommands(deviceIds, 'setLevel', { value });
-          } else if (shouldUseZone) {
-            dispatchMediaCommands(deviceIds, 'setZoneVolume', { value: [zone, value] });
-          } else {
-            dispatchMediaCommands(deviceIds, 'setVolume', { value });
-          }
+          // Para multiroom: usar sempre setLevel nos dimmers/zonas
+          dispatchMediaCommands(deviceIds, 'setLevel', { value });
           volumeChangeTimers[stateKey] = null;
         }, 300);
       }
@@ -1399,8 +1391,6 @@
         if (!buttonEl) return;
         const envKey = buttonEl.dataset.env;
         const playbackKey = buttonEl.dataset.playbackKey || 'default';
-        const zone = getMediaZone(envKey);
-
         const stateKey = getPlaybackStateKey(envKey, playbackKey);
         const nextMuted = !(envKey && playbackMuteState[stateKey]);
         
@@ -1418,19 +1408,8 @@
             return;
           }
 
-          if (envKey === 'ambiente1') {
-            const command = nextMuted ? 'off' : 'on';
-            dispatchMediaCommands(deviceIds, command);
-            return;
-          }
-
-          if (!zone) {
-            console.warn('[media-control] Zona não configurada para mute');
-            return;
-          }
-
-          const command = nextMuted ? 'muteZone' : 'unmuteZone';
-          dispatchMediaCommands(deviceIds, command, { value: `${zone}` });
+          const command = nextMuted ? 'off' : 'on';
+          dispatchMediaCommands(deviceIds, command);
         }, 0);
       }
 

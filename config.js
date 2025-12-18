@@ -376,10 +376,10 @@ const CLIENT_CONFIG = {
                     { id: "", name: "Computador" }
                 ],
                 playback: {
-                    powerDevices: ["125"],
-                    transportDeviceId: "125",
-                    volumeDeviceId: "125",
-                    volumeLabel: "Volume geral"
+                    powerDevices: ["218"],
+                    transportDeviceId: null,
+                    volumeDeviceId: ["218"],
+                    volumeLabel: "Volume geral (Zona 3)"
                 }
             },
             lights: [
@@ -581,17 +581,17 @@ const CLIENT_CONFIG = {
                     {
                         key: "player1",
                         label: "Processo Direita",
-                        powerDevices: ["129"],
-                        transportDeviceId: "129",
-                        volumeDeviceId: "129",
+                        powerDevices: ["206"],
+                        transportDeviceId: null,
+                        volumeDeviceId: ["206"],
                         volumeLabel: "Volume Processo Direita"
                     },
                     {
                         key: "player2",
                         label: "Processo Esquerda",
-                        powerDevices: ["128"],
-                        transportDeviceId: "128",
-                        volumeDeviceId: "128",
+                        powerDevices: ["207"],
+                        transportDeviceId: null,
+                        volumeDeviceId: ["207"],
                         volumeLabel: "Volume Processo Esquerda"
                     }
                 ]
@@ -689,10 +689,10 @@ const CLIENT_CONFIG = {
                     { id: "124", name: "TV", description: "Televisão principal" }
                 ],
                 playback: {
-                    powerDevices: [],
-                    transportDeviceId: "126",
-                    volumeDeviceId: "132",
-                    volumeLabel: "Volume geral"
+                    powerDevices: ["219"],
+                    transportDeviceId: null,
+                    volumeDeviceId: ["219"],
+                    volumeLabel: "Volume geral (Zona 4)"
                 }
             },
             lights: [
