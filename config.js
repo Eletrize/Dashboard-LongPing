@@ -220,7 +220,7 @@ const CLIENT_CONFIG = {
                 ],
                 playback: {
                     powerDevices: ["216", "217"],
-                    transportDeviceId: null,
+                    transportDeviceId: "12",
                     volumeDeviceId: ["216", "217"],
                     volumeLabel: "Volume geral (Z1+Z2)"
                 }
@@ -338,6 +338,10 @@ const CLIENT_CONFIG = {
                     volumeDeviceId: "130",
                     volumeLabel: "Volume geral"
                 }
+            },
+            sceneButtons: {
+                start: { deviceId: "185", button: "1" },
+                stop: { deviceId: "164", button: "1" }
             },
             lights: [
                 { id: "55", name: "LED Frio" },
@@ -503,8 +507,8 @@ const CLIENT_CONFIG = {
                 }
             },
             sceneButtons: {
-                start: { deviceId: "163", button: "1" },
-                stop: { deviceId: "164", button: "1" }
+                start: { deviceId: "187", button: "1" },
+                stop: { deviceId: "170", button: "1" }
             },
             lights: [
                 { id: "40", name: "Spots" },
@@ -606,7 +610,7 @@ const CLIENT_CONFIG = {
                         key: "player1",
                         label: "Processo Direita",
                         powerDevices: ["206"],
-                        transportDeviceId: null,
+                        transportDeviceId: "129",
                         volumeDeviceId: ["206"],
                         volumeLabel: "Volume Processo Direita"
                     },
@@ -614,7 +618,7 @@ const CLIENT_CONFIG = {
                         key: "player2",
                         label: "Processo Esquerda",
                         powerDevices: ["207"],
-                        transportDeviceId: null,
+                        transportDeviceId: "128",
                         volumeDeviceId: ["207"],
                         volumeLabel: "Volume Processo Esquerda"
                     }
@@ -718,7 +722,7 @@ const CLIENT_CONFIG = {
                 ],
                 playback: {
                     powerDevices: ["219"],
-                    transportDeviceId: null,
+                    transportDeviceId: "126",
                     volumeDeviceId: ["219"],
                     volumeLabel: "Volume geral (Zona 4)"
                 }
