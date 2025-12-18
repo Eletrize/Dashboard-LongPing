@@ -712,7 +712,6 @@ private void processPowerResponse(List<String> params) {
         
         sendEvent(name: "power", value: isOn ? "on" : "off")
         sendEvent(name: "switch", value: isOn ? "on" : "off")
-        sendChildSwitchToAll(isOn ? "on" : "off")
         logDebug "Power: ${isOn ? 'ON' : 'OFF'}"
     }
 }
@@ -746,6 +745,8 @@ private void processMuteResponse(List<String> params) {
         
         sendEvent(name: "zone${zone}Mute", value: muteValue)
         sendChildEvent(zone, "mute", muteValue)
+        // No child, Switch representa MUTE (off=muted, on=unmuted)
+        sendChildEvent(zone, "switch", isMuted ? "off" : "on")
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "mute", value: muteValue)

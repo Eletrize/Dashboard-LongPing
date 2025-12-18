@@ -9,6 +9,7 @@
 metadata {
     definition(name: "AAT Multiroom Zone v2", namespace: "trato.aat", author: "VH") {
         capability "Switch"
+        capability "SwitchLevel"
         capability "AudioVolume"
         capability "Actuator"
         capability "Sensor"
@@ -49,20 +50,26 @@ def refresh() {
 }
 
 def on() {
-    parent?.powerOn()
+    // Neste child, Switch representa MUTE (on = unmute)
+    parent?.unmuteZone(getZoneNumber())
 }
 
 def off() {
-    parent?.powerOff()
+    // Neste child, Switch representa MUTE (off = mute)
+    parent?.muteZone(getZoneNumber())
 }
 
 def powerToggle() {
-    parent?.powerToggle()
+    parent?.toggleMuteZone(getZoneNumber())
 }
 
 /* ===================== Volume/Mute ===================== */
 def setVolume(volume) {
     parent?.setZoneVolume(getZoneNumber(), volume)
+}
+
+def setLevel(level) {
+    parent?.setZoneVolume(getZoneNumber(), level)
 }
 
 def volumeUp() {

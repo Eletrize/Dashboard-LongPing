@@ -1502,8 +1502,17 @@ async function updateDenonVolumeFromServer() {
       : document.querySelector("#music-volume-slider");
 
   try {
+    const musicDeviceIds = musicSlider?.dataset?.deviceId
+      ? parseDeviceIdList(musicSlider.dataset.deviceId)
+      : [DENON_DEVICE_ID];
+    const musicDeviceId = musicDeviceIds[0] || DENON_DEVICE_ID;
+
+    const devicesToPoll = new Set();
+    if (tvSlider) devicesToPoll.add(DENON_DEVICE_ID);
+    if (musicSlider) devicesToPoll.add(musicDeviceId);
+
     const pollingUrl = isProduction
-      ? `${POLLING_URL}?devices=${DENON_DEVICE_ID}`
+      ? `${POLLING_URL}?devices=${Array.from(devicesToPoll).join(",")}`
       : null;
 
     if (!pollingUrl) {
@@ -1518,42 +1527,44 @@ async function updateDenonVolumeFromServer() {
 
     const data = await response.json();
 
-    // Processar resposta para pegar o volume e o estado de energia
-    let volume = null;
-    let powerState = null;
+    const findDevicePayload = (payload, deviceId) => {
+      if (!payload) return null;
+      if (payload.devices && payload.devices[deviceId]) return payload.devices[deviceId];
+      const list = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+        ? payload.data
+        : null;
+      if (!list) return null;
+      return list.find((d) => String(d?.id) === String(deviceId)) || null;
+    };
 
-    if (data.devices && data.devices[DENON_DEVICE_ID]) {
-      const devicePayload = data.devices[DENON_DEVICE_ID];
-      volume =
-        devicePayload.volume ??
-        devicePayload.level ??
-        (devicePayload.attributes && devicePayload.attributes.volume);
-      powerState = getDenonPowerStateFromDevice(devicePayload);
-    } else if (Array.isArray(data.data)) {
-      const denonData = data.data.find((d) => String(d.id) === DENON_DEVICE_ID);
-      if (denonData) {
-        if (denonData.attributes) {
-          if (Array.isArray(denonData.attributes)) {
-            const volumeAttr = denonData.attributes.find(
-              (attr) => attr?.name === "volume"
-            );
-            volume =
-              volumeAttr?.currentValue ??
-              volumeAttr?.value ??
-              denonData.volume ??
-              volume;
-          } else if (typeof denonData.attributes === "object") {
-            volume = denonData.attributes.volume ?? denonData.volume ?? volume;
-          }
-        } else if (denonData.volume !== undefined) {
-          volume = denonData.volume;
-        }
-        powerState = getDenonPowerStateFromDevice(denonData);
+    const extractVolume = (devicePayload) => {
+      if (!devicePayload) return null;
+      if (devicePayload.volume !== undefined && devicePayload.volume !== null) return devicePayload.volume;
+      if (devicePayload.level !== undefined && devicePayload.level !== null) return devicePayload.level;
+
+      const attrs = devicePayload.attributes;
+      if (Array.isArray(attrs)) {
+        const attr = attrs.find((a) => a?.name === "volume" || a?.name === "level");
+        return attr?.currentValue ?? attr?.value ?? null;
       }
-    }
 
-    if (volume !== null && volume !== undefined) {
-      const volumeValue = parseInt(volume, 10);
+      if (attrs && typeof attrs === "object") {
+        return attrs.volume ?? attrs.level ?? null;
+      }
+
+      return null;
+    };
+
+    const denonPayload = tvSlider ? findDevicePayload(data, DENON_DEVICE_ID) : null;
+    const musicPayload = musicSlider ? findDevicePayload(data, musicDeviceId) : null;
+
+    const denonVolume = extractVolume(denonPayload);
+    const musicVolume = extractVolume(musicPayload);
+
+    if (denonVolume !== null && denonVolume !== undefined) {
+      const volumeValue = parseInt(denonVolume, 10);
 
       if (tvSlider) {
         const maxTv = parseInt(tvSlider.max || "100", 10);
@@ -1566,21 +1577,22 @@ async function updateDenonVolumeFromServer() {
         tvDisplay.textContent = volumeValue;
       }
 
-      if (musicSlider) {
-        const maxMusic = parseInt(musicSlider.max || "100", 10);
-        const percentageMusic = (volumeValue / maxMusic) * 100;
-        musicSlider.value = volumeValue;
-        musicSlider.style.setProperty(
-          "--volume-percent",
-          percentageMusic + "%"
-        );
-      }
-
       console.log("[Denon] Volume atualizado:", volumeValue);
     }
 
-    if (powerState) {
-      applyDenonPowerState(powerState);
+    if (musicSlider && musicVolume !== null && musicVolume !== undefined) {
+      const volumeValue = parseInt(musicVolume, 10);
+      const maxMusic = parseInt(musicSlider.max || "100", 10);
+      const percentageMusic = (volumeValue / maxMusic) * 100;
+      musicSlider.value = volumeValue;
+      musicSlider.style.setProperty("--volume-percent", percentageMusic + "%");
+    }
+
+    if (denonPayload) {
+      const powerState = getDenonPowerStateFromDevice(denonPayload);
+      if (powerState) {
+        applyDenonPowerState(powerState);
+      }
     }
   } catch (error) {
     console.error("??Erro ao buscar volume do Denon:", error);
@@ -1595,6 +1607,10 @@ function updateDenonVolumeUI(volume) {
     typeof queryActiveMusic === "function"
       ? queryActiveMusic("#music-volume-slider")
       : document.querySelector("#music-volume-slider");
+  const musicDeviceIds = musicSlider?.dataset?.deviceId
+    ? parseDeviceIdList(musicSlider.dataset.deviceId)
+    : ["15"];
+  const shouldUpdateMusicSlider = (musicDeviceIds[0] || "15") === "15";
 
   debugLog(() => ["updateDenonVolumeUI chamada", { volume }]);
 
@@ -1638,7 +1654,7 @@ function updateDenonVolumeUI(volume) {
     }
   }
 
-  if (musicSlider) {
+  if (musicSlider && shouldUpdateMusicSlider) {
     const currentMusic = parseInt(musicSlider.value, 10);
     const maxMusic = musicSlider.max || 100;
     const percentageMusic = (volumeValue / maxMusic) * 100;
@@ -3716,6 +3732,41 @@ async function loadAllDeviceStatesDirect(deviceIds) {
     fallback: true,
     disabled: true,
   };
+}
+
+function parseDeviceIdList(deviceIds) {
+  if (Array.isArray(deviceIds)) {
+    return deviceIds
+      .map((id) => String(id).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof deviceIds === "number") {
+    return [String(deviceIds)];
+  }
+
+  if (typeof deviceIds !== "string") {
+    return [];
+  }
+
+  return deviceIds
+    .split(/[,; ]+/)
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+function markRecentCommandsForDevices(deviceIds) {
+  const ids = parseDeviceIdList(deviceIds);
+  const ts = Date.now();
+  ids.forEach((id) => recentCommands.set(id, ts));
+}
+
+function sendHubitatCommandToDevices(deviceIds, command, value) {
+  const ids = parseDeviceIdList(deviceIds);
+  if (!ids.length) {
+    return Promise.reject(new Error("Nenhum deviceId informado"));
+  }
+  return Promise.all(ids.map((id) => sendHubitatCommand(id, command, value)));
 }
 
 // Função para testar Configurações do Hubitat
@@ -6370,6 +6421,12 @@ function initMusicPlayerUI() {
     );
   }
 
+  const CMD_DEVICE_IDS = parseDeviceIdList(DENON_CMD_DEVICE_ID);
+  const AUDIO_CMD_MODE =
+    CMD_DEVICE_IDS.length === 1 && CMD_DEVICE_IDS[0] === "15"
+      ? "denon"
+      : "generic";
+
   playToggleBtn.addEventListener("click", () => {
     const action = isPlaying ? "pause" : "play";
     console.log(
@@ -6422,12 +6479,20 @@ function initMusicPlayerUI() {
   if (muteBtn && volumeSlider) {
     muteBtn.addEventListener("click", () => {
       const newMutedState = !isMuted;
-      const command = newMutedState ? "mute" : "unmute";
+      const command =
+        AUDIO_CMD_MODE === "denon"
+          ? newMutedState
+            ? "mute"
+            : "unmute"
+          : newMutedState
+          ? "off"
+          : "on";
       console.log(
         `Ã°Å¸â€â€¡ Mute button clicked - enviando comando "${command}" para device ${DENON_CMD_DEVICE_ID}`
       );
 
-      sendHubitatCommand(DENON_CMD_DEVICE_ID, command)
+      markRecentCommandsForDevices(CMD_DEVICE_IDS);
+      sendHubitatCommandToDevices(CMD_DEVICE_IDS, command)
         .then(() => {
           console.log(`Ã¢Å“â€¦ Comando ${command} enviado com sucesso`);
           setMuted(newMutedState);
@@ -6476,19 +6541,21 @@ function initMusicPlayerUI() {
 
       musicSlider.addEventListener("change", (e) => {
         const value = e.target.value;
+        const volumeCommand =
+          AUDIO_CMD_MODE === "denon" ? "setVolume" : "setLevel";
         console.log(
-          `Ã°Å¸â€Å  Music slider changed -> sending setVolume ${value} to Denon (${DENON_CMD_DEVICE_ID})`
+          `Ã°Å¸â€Å  Music slider changed -> sending ${volumeCommand} ${value} to (${DENON_CMD_DEVICE_ID})`
         );
         // Mark recent command to prevent polling overwrite
-        recentCommands.set(DENON_CMD_DEVICE_ID, Date.now());
+        markRecentCommandsForDevices(CMD_DEVICE_IDS);
         // Send command
-        sendHubitatCommand(DENON_CMD_DEVICE_ID, "setVolume", value)
+        sendHubitatCommandToDevices(CMD_DEVICE_IDS, volumeCommand, value)
           .then(() =>
-            console.log("Ã¢Å“â€¦ setVolume sent to Denon via music slider")
+            console.log("Ã¢Å“â€¦ volume command sent via music slider")
           )
           .catch((err) =>
             console.error(
-              "??Error sending setVolume from music slider:",
+              "??Error sending volume command from music slider:",
               err
             )
           );
@@ -6539,8 +6606,8 @@ function initMusicPlayerUI() {
         console.log(
           `Power ON clicked - enviando comando "on" para device ${DENON_CMD_DEVICE_ID}`
         );
-        recentCommands.set(DENON_CMD_DEVICE_ID, Date.now());
-        sendHubitatCommand(DENON_CMD_DEVICE_ID, "on")
+        markRecentCommandsForDevices(CMD_DEVICE_IDS);
+        sendHubitatCommandToDevices(CMD_DEVICE_IDS, "on")
           .then(() => {
             console.log("Ã¢Å“â€¦ Comando on enviado com sucesso");
             setMasterPower(true);
@@ -6556,8 +6623,8 @@ function initMusicPlayerUI() {
         console.log(
           `Power OFF clicked - enviando comando "off" para device ${DENON_CMD_DEVICE_ID}`
         );
-        recentCommands.set(DENON_CMD_DEVICE_ID, Date.now());
-        sendHubitatCommand(DENON_CMD_DEVICE_ID, "off")
+        markRecentCommandsForDevices(CMD_DEVICE_IDS);
+        sendHubitatCommandToDevices(CMD_DEVICE_IDS, "off")
           .then(() => {
             console.log("Ã¢Å“â€¦ Comando off enviado com sucesso");
             setMasterPower(false);
