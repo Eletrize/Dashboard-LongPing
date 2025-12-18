@@ -1007,6 +1007,71 @@ html.js-ready [class*="-luzes-wrapper"] {
     font-size: 1rem;
 }
 
+.media-panel__section--imersao {
+    background: rgba(0, 60, 24, 0.82);
+}
+
+.imersao-playback-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+    .imersao-playback-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.imersao-playback-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    min-height: 72px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(0, 135, 57, 0.55), rgba(0, 95, 40, 0.65));
+    color: #fff;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.imersao-playback-btn:hover {
+    background: linear-gradient(135deg, rgba(0, 135, 57, 0.62), rgba(0, 95, 40, 0.7));
+}
+
+.imersao-playback-btn:active {
+    background: linear-gradient(135deg, rgba(0, 135, 57, 0.52), rgba(0, 95, 40, 0.6));
+}
+
+.imersao-playback-btn.is-active {
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(0, 135, 57, 0.8), rgba(0, 135, 57, 0.6));
+}
+
+.imersao-playback-btn__icon {
+    width: 42px;
+    height: 42px;
+    display: block;
+    object-fit: contain;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.imersao-playback-btn__label {
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
 
 .media-panel__actions {
     display: flex;
@@ -1482,8 +1547,8 @@ html.js-ready [class*="-luzes-wrapper"] {
 
 .conforto-btn-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     width: 100%;
 }
 
@@ -1500,6 +1565,11 @@ html.js-ready [class*="-luzes-wrapper"] {
     transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
     box-shadow: 0 8px 16px rgba(0,0,0,0.25);
     backdrop-filter: blur(8px);
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    color: #ffffff;
 }
 
 .conforto-action-btn:hover {
@@ -1518,11 +1588,6 @@ html.js-ready [class*="-luzes-wrapper"] {
     transform: translateY(2px) scale(0.97);
 }
 
-.conforto-action-btn.is-pressed img {
-    opacity: 0.85;
-    filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(255,255,255,0.3));
-}
-
 /* Estado ativo antigo - manter para compatibilidade */
 .conforto-action-btn.is-active {
     background: rgba(30, 210, 121, 0.65);
@@ -1530,16 +1595,8 @@ html.js-ready [class*="-luzes-wrapper"] {
     box-shadow: 0 14px 30px rgba(0,0,0,0.32);
 }
 
-.conforto-action-btn img {
-    width: 38px;
-    height: 38px;
-    filter: brightness(0) invert(1);
+.conforto-action-btn__label {
     pointer-events: none;
-}
-
-.conforto-action-btn--power img {
-    width: 46px;
-    height: 46px;
 }
 
 
@@ -1548,6 +1605,7 @@ html.js-ready [class*="-luzes-wrapper"] {
    SELETOR DE IDIOMA (i18n)
    - */
 .app-info-language{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px;padding-top:16px;border-top:1px solid #ffffff1a}.app-info-language__label{color:#ffffff8c;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.12em}.app-info-language__options{display:flex;gap:8px}.app-info-language__btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 16px;background:rgba(255,255,255,0.08);border:1px solid #ffffff26;border-radius:12px;cursor:pointer;transition:all 0.2s;min-width:60px}.app-info-language__btn:hover{background:rgba(255,255,255,0.15);border-color:#ffffff40;transform:translateY(-2px)}.app-info-language__btn:active{transform:scale(0.95)}.app-info-language__btn.active{background:rgba(0,135,57,0.5);border-color:#00873980;box-shadow:0 0 12px rgba(0,135,57,0.3)}.app-info-language__flag{font-size:24px;line-height:1}.app-info-language__name{color:#fff;font-size:11px;font-weight:600;letter-spacing:0.05em}
+.app-info-language__flag-icon{width:24px;height:24px;object-fit:contain}
 
 /* 
    SELETOR DE IDIOMA (i18n)

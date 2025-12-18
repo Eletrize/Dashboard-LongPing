@@ -56,8 +56,8 @@ self.addEventListener("fetch", (event) => {
     /cloud\.hubitat\.com$/i.test(url.hostname) ||
     /\/apps\/api\//i.test(url.pathname);
 
-  // Nunca cacheia/intercepta chamadas para os proxies locais
-  if (url.pathname.startsWith("/functions/")) {
+  // Nunca cacheia/intercepta chamadas para a API local
+  if (url.pathname.startsWith("/api/")) {
     return;
   }
 

@@ -133,6 +133,7 @@ metadata {
 @Field static final Integer MAX_ZONES = 6
 @Field static final Integer MAX_INPUTS = 8
 @Field static final Integer RECONNECT_DELAY = 5
+@Field static final String CHILD_DRIVER_NAME = "AAT Multiroom Zone v2"
 
 /* ===================== Lifecycle ===================== */
 def installed() {
@@ -157,6 +158,7 @@ def initialize() {
     sendEvent(name: "zone", value: state.zone)
     sendEvent(name: "protocol", value: connectionType ?: "TCP")
     sendEvent(name: "connectionStatus", value: "initializing")
+    createChildDevices()
     
     // Configurar polling
     configurePollInterval()
@@ -174,6 +176,7 @@ def initialize() {
 def uninstalled() {
     logDebug "Desinstalando driver"
     unschedule()
+    removeChildDevices()
     disconnect()
 }
 
@@ -575,12 +578,10 @@ def refresh() {
     logDebug "Atualizando status"
     
     // Status de energia
-    sendCommand("PWRGET")
-    pauseExecution(100)
+    getAllStatus()
     
     // Status da zona padrão
-    Integer zone = state.zone ?: 1
-    getZoneStatus(zone)
+    // getZoneStatus(...) removido; status completo via getAllStatus()
 }
 
 def getZoneStatus(zone) {
@@ -711,6 +712,7 @@ private void processPowerResponse(List<String> params) {
         
         sendEvent(name: "power", value: isOn ? "on" : "off")
         sendEvent(name: "switch", value: isOn ? "on" : "off")
+        sendChildSwitchToAll(isOn ? "on" : "off")
         logDebug "Power: ${isOn ? 'ON' : 'OFF'}"
     }
 }
@@ -722,6 +724,8 @@ private void processVolumeResponse(List<String> params) {
         
         // Atualizar atributo específico da zona
         sendEvent(name: "zone${zone}Volume", value: volume)
+        sendChildEvent(zone, "volume", volume)
+        sendChildEvent(zone, "level", volume)
         
         // Se for a zona padrão, atualizar atributo principal
         if (zone == (state.zone ?: 1)) {
@@ -741,6 +745,7 @@ private void processMuteResponse(List<String> params) {
         String muteValue = isMuted ? "muted" : "unmuted"
         
         sendEvent(name: "zone${zone}Mute", value: muteValue)
+        sendChildEvent(zone, "mute", muteValue)
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "mute", value: muteValue)
@@ -756,6 +761,7 @@ private void processInputResponse(List<String> params) {
         Integer input = params[1] as Integer
         
         sendEvent(name: "zone${zone}Input", value: input)
+        sendChildEvent(zone, "input", input)
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "input", value: input)
@@ -769,6 +775,7 @@ private void processBassResponse(List<String> params) {
     if (params.size() >= 2) {
         Integer zone = params[0] as Integer
         Integer bass = params[1] as Integer
+        sendChildEvent(zone, "bass", bass)
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "bass", value: bass)
@@ -782,6 +789,7 @@ private void processTrebleResponse(List<String> params) {
     if (params.size() >= 2) {
         Integer zone = params[0] as Integer
         Integer treble = params[1] as Integer
+        sendChildEvent(zone, "treble", treble)
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "treble", value: treble)
@@ -795,6 +803,7 @@ private void processBalanceResponse(List<String> params) {
     if (params.size() >= 2) {
         Integer zone = params[0] as Integer
         Integer balance = params[1] as Integer
+        sendChildEvent(zone, "balance", balance)
         
         if (zone == (state.zone ?: 1)) {
             sendEvent(name: "balance", value: balance)
@@ -805,6 +814,99 @@ private void processBalanceResponse(List<String> params) {
 }
 
 /* ===================== Utilitários ===================== */
+/* ===================== Child Devices (Zonas) ===================== */
+private void createChildDevices() {
+    Integer zones = getZonesConfigured()
+
+    for (int z = 1; z <= zones; z++) {
+        String dni = childDni(z)
+        def child = getChildDevice(dni)
+
+        if (!child) {
+            try {
+                child = addChildDevice(
+                    "trato.aat",
+                    CHILD_DRIVER_NAME,
+                    dni,
+                    [
+                        label: "${device.displayName} - Zona ${z}",
+                        name: "${device.displayName} Zona ${z}",
+                        isComponent: true
+                    ]
+                )
+                logInfo "Child criado para zona ${z}"
+            } catch (Exception e) {
+                logError "Falha ao criar child da zona ${z}. Instale o driver '${CHILD_DRIVER_NAME}'. Erro: ${e.message}"
+                continue
+            }
+        }
+
+        ensureChildMetadata(child, z)
+    }
+
+    // Remover children gerenciados que nao existem mais na configuracao
+    getChildDevices()?.each { cd ->
+        if (cd?.getDataValue("isAATZoneChild") == "true" && cd?.getDataValue("parentDni") == device.deviceNetworkId) {
+            Integer z = (cd.getDataValue("zone") ?: "0") as Integer
+            if (z < 1 || z > zones) {
+                try {
+                    deleteChildDevice(cd.deviceNetworkId)
+                    logInfo "Child removido (zona ${z})"
+                } catch (Exception e) {
+                    logDebug "Nao foi possivel remover child ${cd.deviceNetworkId}: ${e.message}"
+                }
+            }
+        }
+    }
+}
+
+private void removeChildDevices() {
+    getChildDevices()?.each { cd ->
+        if (cd?.getDataValue("isAATZoneChild") == "true" && cd?.getDataValue("parentDni") == device.deviceNetworkId) {
+            try {
+                deleteChildDevice(cd.deviceNetworkId)
+            } catch (Exception e) {
+                logDebug "Nao foi possivel remover child ${cd.deviceNetworkId}: ${e.message}"
+            }
+        }
+    }
+}
+
+private Integer getZonesConfigured() {
+    Integer zones = (numZones ?: "6") as Integer
+    return clamp(zones, 1, MAX_ZONES)
+}
+
+private String childDni(Integer zone) {
+    return "${device.deviceNetworkId}-Z${zone}"
+}
+
+private void ensureChildMetadata(child, Integer zone) {
+    if (!child) return
+    try {
+        child.updateDataValue("isAATZoneChild", "true")
+        child.updateDataValue("parentDni", device.deviceNetworkId)
+        child.updateDataValue("zone", "${zone}")
+    } catch (Exception e) {
+        logDebug "Nao foi possivel atualizar metadata do child (zona ${zone}): ${e.message}"
+    }
+}
+
+private void sendChildEvent(Integer zone, String eventName, value) {
+    def child = getChildDevice(childDni(zone))
+    if (child) {
+        child.sendEvent(name: eventName, value: value)
+    }
+}
+
+private void sendChildSwitchToAll(String switchValue) {
+    getChildDevices()?.each { cd ->
+        if (cd?.getDataValue("isAATZoneChild") == "true" && cd?.getDataValue("parentDni") == device.deviceNetworkId) {
+            cd.sendEvent(name: "switch", value: switchValue)
+        }
+    }
+}
+
 private Integer validateZone(zone) {
     Integer z = (zone ?: state.zone ?: 1) as Integer
     Integer maxZones = (numZones ?: "6") as Integer

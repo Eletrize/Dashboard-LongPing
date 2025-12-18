@@ -309,6 +309,37 @@ function setSceneToggleState(envKey, isOn) {
   }
 }
 
+function normalizeSceneAction(action, fallbackLabel) {
+  if (!action || typeof action !== 'object') return null;
+
+  const deviceId = action.deviceId ?? action.device ?? null;
+  const command = action.command ?? null;
+  const button = action.button ?? action.push ?? null;
+
+  if (button !== null && button !== undefined && deviceId) {
+    return {
+      deviceId: String(deviceId),
+      command: 'push',
+      value: String(button),
+      label: action.label || fallbackLabel || 'Cenário',
+    };
+  }
+
+  if (!deviceId || !command) return null;
+
+  let value = action.value;
+  if (action.value2 !== undefined && action.value2 !== null) {
+    value = [action.value, action.value2];
+  }
+
+  return {
+    deviceId: String(deviceId),
+    command: String(command),
+    value,
+    label: action.label || fallbackLabel || 'Cenário',
+  };
+}
+
 function executeEnvironmentScene(envKey, elementId) {
   const commands = collectEnvironmentSceneCommands(envKey);
   const card = elementId ? document.getElementById(elementId) : null;
@@ -398,6 +429,16 @@ function collectEnvironmentSceneCommands(envKey) {
   }
 
   const env = CLIENT_CONFIG.environments[envKey];
+
+  const configuredAction = normalizeSceneAction(
+    env.sceneActions?.on || env.sceneAction?.on || env.sceneCommand?.on,
+    `Cenário ${getEnvironmentDisplayName(envKey)} (ON)`
+  );
+  if (configuredAction) {
+    return [configuredAction];
+  }
+  return [];
+
   const commands = [];
 
   const add = (deviceId, command, label) => addCommandIfValid(commands, deviceId, command, label);
@@ -493,6 +534,16 @@ function collectEnvironmentSceneOffCommands(envKey) {
   }
 
   const env = CLIENT_CONFIG.environments[envKey];
+
+  const configuredAction = normalizeSceneAction(
+    env.sceneActions?.off || env.sceneAction?.off || env.sceneCommand?.off,
+    `Cenário ${getEnvironmentDisplayName(envKey)} (OFF)`
+  );
+  if (configuredAction) {
+    return [configuredAction];
+  }
+  return [];
+
   const commands = [];
 
   const add = (deviceId, command, label) => addCommandIfValid(commands, deviceId, command, label);
@@ -813,6 +864,37 @@ function executeCenarioInicializar() {
   const btn = document.getElementById("cenario-inicializar-btn");
   if (btn) btn.classList.add("loading");
 
+  const configuredAction = normalizeSceneAction(
+    typeof CLIENT_CONFIG !== 'undefined' ? CLIENT_CONFIG?.scenarioActions?.inicializar : null,
+    'Cenário Inicializar'
+  );
+  if (configuredAction) {
+    return Promise.resolve(
+      configuredAction.value !== undefined
+        ? sendHubitatCommand(configuredAction.deviceId, configuredAction.command, configuredAction.value)
+        : sendHubitatCommand(configuredAction.deviceId, configuredAction.command)
+    )
+      .then(() => {
+        hidePopup();
+      })
+      .catch((error) => {
+        if (typeof showErrorMessage === "function") {
+          showErrorMessage(tr('Erro ao executar cenÇ­rio Inicializar: {error}', { error: error.message }));
+        }
+        throw error;
+      })
+      .finally(() => {
+        if (btn) btn.classList.remove("loading");
+      });
+  }
+
+  if (typeof showErrorMessage === "function") {
+    showErrorMessage("Cenário Inicializar não configurado (CLIENT_CONFIG.scenarioActions.inicializar)");
+  }
+  hidePopup();
+  if (btn) btn.classList.remove("loading");
+  return;
+
   // IDs dos dispositivos
   const varandaLuzes = getVarandaLuzes();
   const livingLuzes = getLivingLuzes();
@@ -875,6 +957,42 @@ function executeCenarioDormir() {
   // Adicionar feedback visual
   const btn = document.getElementById("cenario-dormir-btn");
   if (btn) btn.classList.add("loading");
+
+  const configuredAction = normalizeSceneAction(
+    typeof CLIENT_CONFIG !== 'undefined' ? CLIENT_CONFIG?.scenarioActions?.dormir : null,
+    'Cenário Dormir'
+  );
+  if (configuredAction) {
+    return Promise.resolve(
+      configuredAction.value !== undefined
+        ? sendHubitatCommand(configuredAction.deviceId, configuredAction.command, configuredAction.value)
+        : sendHubitatCommand(configuredAction.deviceId, configuredAction.command)
+    )
+      .then(() => {
+        setTimeout(() => {
+          if (typeof syncAllVisibleControls === "function") {
+            syncAllVisibleControls(true);
+          }
+        }, 500);
+        hidePopup();
+      })
+      .catch((error) => {
+        if (typeof showErrorMessage === "function") {
+          showErrorMessage(tr('Erro ao executar cenÇ­rio Dormir: {error}', { error: error.message }));
+        }
+        throw error;
+      })
+      .finally(() => {
+        if (btn) btn.classList.remove("loading");
+      });
+  }
+
+  if (typeof showErrorMessage === "function") {
+    showErrorMessage("Cenário Dormir não configurado (CLIENT_CONFIG.scenarioActions.dormir)");
+  }
+  hidePopup();
+  if (btn) btn.classList.remove("loading");
+  return;
 
   const promises = [];
 

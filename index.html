@@ -44,9 +44,9 @@
 
     <script>
       (function () {
-        const CLOUDFLARE_BEACON_HOST = "static.cloudflareinsights.com/beacon";
+        // (removido)
 
-        function suppressCloudflareWarning(event) {
+        /*
           const target = event.target || {};
           const origin =
             (typeof target.src === "string" && target.src) ||
@@ -67,18 +67,16 @@
           if (!window.__cfBeaconWarningShown) {
             window.__cfBeaconWarningShown = true;
             console.info(
-              "Cloudflare Insights não pôde ser carregado (uso offline ou script bloqueado). Nenhuma ação adicional é necessária."
+              "Script externo não pôde ser carregado (offline ou bloqueado)."
             );
           }
-        }
+        */
 
         function removeScenesPreload() {
           document
             .querySelectorAll('link[rel="preload"][href*="scenes.js"]')
             .forEach((link) => link.remove());
         }
-
-        window.addEventListener("error", suppressCloudflareWarning, true);
 
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", removeScenesPreload);
@@ -238,15 +236,15 @@
             <span class="app-info-language__label" data-i18n="menu.language">Idioma</span>
             <div class="app-info-language__options" id="language-selector">
               <button type="button" class="app-info-language__btn" data-locale="pt" aria-label="Português">
-                <span class="app-info-language__flag">🇧🇷</span>
+                <img class="app-info-language__flag-icon" src="images/icons/icon-br-v2.svg" alt="Português" loading="lazy" decoding="async">
                 <span class="app-info-language__name">PT</span>
               </button>
               <button type="button" class="app-info-language__btn" data-locale="en" aria-label="English">
-                <span class="app-info-language__flag">🇺🇸</span>
+                <img class="app-info-language__flag-icon" src="images/icons/icon-en-v2.svg" alt="English" loading="lazy" decoding="async">
                 <span class="app-info-language__name">EN</span>
               </button>
               <button type="button" class="app-info-language__btn" data-locale="zh" aria-label="中文">
-                <span class="app-info-language__flag">🇨🇳</span>
+                <img class="app-info-language__flag-icon" src="images/icons/icon-cn-v2.svg" alt="中文" loading="lazy" decoding="async">
                 <span class="app-info-language__name">中文</span>
               </button>
             </div>
@@ -1014,14 +1012,11 @@
               <div id="${optionsId}" class="conforto-options" aria-hidden="true">
                 <div class="conforto-drawer">
                   <div class="conforto-btn-row">
-                    <button type="button" class="conforto-action-btn conforto-action-btn--power" data-conforto-power-btn="${envKey}" onclick="handleConfortoAction('${envKey}', 'power')" aria-label="Power" aria-pressed="false">
-                      <img src="images/icons/icon-ac-power.svg" alt="">
+                    <button type="button" class="conforto-action-btn conforto-action-btn--on" data-conforto-on-btn="${envKey}" onclick="handleConfortoAction('${envKey}', 'on')" aria-label="Ligar conforto" aria-pressed="false">
+                      <span class="conforto-action-btn__label">On</span>
                     </button>
-                    <button type="button" class="conforto-action-btn conforto-action-btn--mode" data-conforto-mode-btn="${envKey}" data-mode="cool" onclick="handleConfortoAction('${envKey}', 'cool')" aria-label="Modo Frio 23 graus" aria-pressed="false">
-                      <img src="images/icons/icon-ac-cool.svg" alt="">
-                    </button>
-                    <button type="button" class="conforto-action-btn conforto-action-btn--mode" data-conforto-mode-btn="${envKey}" data-mode="heat" onclick="handleConfortoAction('${envKey}', 'heat')" aria-label="Modo Aquecer 26 graus" aria-pressed="false">
-                      <img src="images/icons/icon-ac-heat.svg" alt="">
+                    <button type="button" class="conforto-action-btn conforto-action-btn--off" data-conforto-off-btn="${envKey}" onclick="handleConfortoAction('${envKey}', 'off')" aria-label="Desligar conforto" aria-pressed="false">
+                      <span class="conforto-action-btn__label">Off</span>
                     </button>
                   </div>
                 </div>
@@ -1314,8 +1309,7 @@
         // Debounce: aguarda 300ms sem alterações antes de enviar
         volumeChangeTimers[stateKey] = setTimeout(() => {
           if (shouldUseZone) {
-            const valueString = `${zone}/${value}`;
-            dispatchMediaCommands([deviceId], 'setZoneVolume', { value: valueString });
+            dispatchMediaCommands([deviceId], 'setZoneVolume', { value: [zone, value] });
           } else {
             dispatchMediaCommands([deviceId], 'setVolume', { value });
           }
@@ -1462,6 +1456,7 @@
 
       function handleMediaDeviceCommand(rawDeviceId, command, cardId) {
         const normalized = normalizeMediaDeviceId(rawDeviceId);
+        const effectiveCommand = normalized === '69' && command === 'on' ? 'off' : command;
         
         if (cardId) {
           const card = document.getElementById(cardId);
@@ -1480,7 +1475,7 @@
         if (!normalized) {
           console.warn('[media-control] ID de dispositivo inválido para controle individual - comando ignorado');
         } else {
-          dispatchMediaCommands([normalized], command);
+          dispatchMediaCommands([normalized], effectiveCommand);
         }
       }
 
@@ -1629,6 +1624,7 @@
           : 'Conectado';
         const playLabel = typeof translateText === 'function' ? translateText('Reproduzir') : 'Reproduzir';
         const pauseLabel = typeof translateText === 'function' ? translateText('Pausar') : 'Pausar';
+        const stopLabel = typeof translateText === 'function' ? translateText('Parar') : 'Parar';
         const muteLabel = typeof translateText === 'function' ? translateText('Ativar mute') : 'Ativar mute';
         const onLabel = typeof translateText === 'function' ? translateText('Ligar') : 'Ligar';
         const offLabel = typeof translateText === 'function' ? translateText('Desligar') : 'Desligar';
@@ -1658,6 +1654,9 @@
                   <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-transport="pause" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'pause', '${safePlaybackKey}')" aria-label="${pauseLabel}"${transportDisabledAttr}>
                     <img src="images/icons/icon-pause.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
                   </button>
+                  <button type="button" class="media-playback-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-transport="stop" data-transport-enabled="${transportAvailableAttr}" onclick="handlePlaybackTransportCommand('${safeEnvKey}', 'stop', '${safePlaybackKey}')" aria-label="${stopLabel}"${transportDisabledAttr}>
+                    <img src="images/icons/icon-end.svg" alt="" class="media-playback-btn__icon" aria-hidden="true">
+                  </button>
                 </div>
                 <div class="media-playback-volume" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}">
                   <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="${muteLabel}" aria-pressed="false"${muteDisabledAttr}>
@@ -1674,7 +1673,232 @@
         `;
       }
 
+      function renderImersaoMediaControlPanel(envKey, controlConfig) {
+        const envName = getTranslatedEnvName(envKey, envKey);
+        const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
+        const buttons = [
+          { cmd: 'standby', label: 'Play Standby', icon: 'icon-LPHT-v2.png' },
+          { cmd: 'playCN', label: 'Play CN', icon: 'icon-cn-v2.svg' },
+          { cmd: 'playEN', label: 'Play EN', icon: 'icon-en-v2.svg' },
+          { cmd: 'playPT', label: 'Play PT', icon: 'icon-br-v2.svg' },
+        ];
+
+        const buttonsHtml = buttons.map(btn => `
+          <button type="button" class="imersao-playback-btn" data-env="${envKey}" data-cmd="${btn.cmd}" onclick="handleImersaoPlayback('${envKey}', '${btn.cmd}')">
+            <img src="images/icons/${btn.icon}" alt="${btn.label}" class="imersao-playback-btn__icon" loading="lazy" decoding="async">
+            <span class="imersao-playback-btn__label">${btn.label}</span>
+          </button>
+        `).join('');
+
+        return `
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container midia-page ${envKey}-page">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="spaNavigate('${envKey}')">
+      <img src="images/icons/back-button.svg" alt="Voltar">
+    </button>
+    <h1 class="page-title">${envName}</h1>
+  </div>
+
+  <div class="midia-wrapper ambiente-grid media-panel-wrapper">
+    <div class="media-panel">
+      <section class="media-panel__section media-panel__section--imersao" data-group="imersao-playback">
+        <header class="media-panel__section-header">
+          <div class="media-panel__section-headline">
+            <div class="media-panel__section-summary">
+              <img src="images/icons/icon-apresentacao.svg" alt="${mediaLabel}" class="media-panel__section-icon">
+              <div class="media-panel__section-title">
+                <h2>${mediaLabel}</h2>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="media-panel__body is-open">
+          <div class="imersao-playback-grid">
+            ${buttonsHtml}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+</div>
+        `;
+      }
+
+      const imersaoPlaybackState = {};
+
+      function getImersaoTransportDevice(envKey) {
+        if (envKey === 'ambiente3') {
+          return '183';
+        }
+        const playbackConfigs = getPlaybackConfigs(envKey);
+        const primary = playbackConfigs && playbackConfigs.length ? playbackConfigs[0] : null;
+        const transport = normalizeMediaDeviceId(primary?.transportDeviceId);
+        if (transport) return transport;
+        const power = Array.isArray(primary?.powerDevices) && primary.powerDevices.length
+          ? normalizeMediaDeviceId(primary.powerDevices[0])
+          : null;
+        return power || null;
+      }
+
+      async function handleImersaoPlayback(envKey, command) {
+        if (!envKey || !command) return;
+        const deviceId = getImersaoTransportDevice(envKey);
+        if (!deviceId) {
+          console.warn('[imersao-playback] Nenhum dispositivo configurado para envio de comando');
+          return;
+        }
+        try {
+          await sendHubitatCommand(deviceId, command);
+          imersaoPlaybackState[envKey] = command;
+          updateImersaoPlaybackUI(envKey);
+        } catch (err) {
+          console.error(`[imersao-playback] Falha ao enviar ${command} para ${deviceId}:`, err);
+        }
+      }
+
+      function updateImersaoPlaybackUI(envKey) {
+        const active = imersaoPlaybackState[envKey];
+        const buttons = document.querySelectorAll(`.imersao-playback-btn[data-env="${envKey}"]`);
+        buttons.forEach((btn) => {
+          const cmd = btn.getAttribute('data-cmd');
+          btn.classList.toggle('is-active', Boolean(active && cmd === active && cmd !== 'standby'));
+        });
+      }
+
+      function renderImersaoPlaybackSection(envKey, playbackConfig) {
+        const playbackKey = playbackConfig?.key || 'default';
+        const safeEnvKey = escapeHtml(envKey);
+        const safePlaybackKey = escapeHtml(playbackKey);
+        const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
+        const { min: sliderMin, max: sliderMax, defaultValue: sliderDefault } = getPlaybackVolumeLimits(envKey);
+        const sliderPercent = Math.round((sliderDefault / sliderMax) * 100);
+        const volumeDeviceId = normalizeMediaDeviceId(playbackConfig?.volumeDeviceId);
+        const volumeAvailableAttr = 'true';
+        const sliderWrapperDisabledClass = '';
+        const volumeDisabledAttr = '';
+        const muteDisabledAttr = '';
+        const muteLabel = typeof translateText === 'function' ? translateText('Ativar mute') : 'Ativar mute';
+
+        const buttons = [
+          { cmd: 'standby', label: 'Play Standby', icon: 'icon-LPHT-v2.png' },
+          { cmd: 'playCN', label: 'Play CN', icon: 'icon-cn-v2.svg' },
+          { cmd: 'playEN', label: 'Play EN', icon: 'icon-en-v2.svg' },
+          { cmd: 'playPT', label: 'Play PT', icon: 'icon-br-v2.svg' },
+        ];
+
+        const buttonsHtml = buttons.map(btn => `
+          <button type="button" class="imersao-playback-btn" data-env="${safeEnvKey}" data-cmd="${btn.cmd}" onclick="handleImersaoPlayback('${safeEnvKey}', '${btn.cmd}')">
+            <img src="images/icons/${btn.icon}" alt="${btn.label}" class="imersao-playback-btn__icon" loading="lazy" decoding="async">
+            <span class="imersao-playback-btn__label">${btn.label}</span>
+          </button>
+        `).join('');
+
+        return `
+        <section class="media-panel__section media-panel__section--imersao" data-group="playback-${safePlaybackKey}">
+          <header class="media-panel__section-header">
+            <div class="media-panel__section-headline">
+              <div class="media-panel__section-summary">
+                <img src="images/icons/icon-apresentacao.svg?v=2" alt="${mediaLabel}" class="media-panel__section-icon">
+                <div class="media-panel__section-title">
+                  <h2>${mediaLabel}</h2>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div class="media-panel__body is-open">
+            <div class="imersao-playback-grid">
+              ${buttonsHtml}
+            </div>
+            <div class="media-playback-volume" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}">
+              <button type="button" class="media-playback-mute-btn" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" onclick="handlePlaybackMuteToggle(this)" aria-label="${muteLabel}" aria-pressed="false"${muteDisabledAttr}>
+                <img src="images/icons/icon-volume.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--unmuted" aria-hidden="true">
+                <img src="images/icons/icon-mute.svg" alt="" class="media-playback-mute-icon media-playback-mute-icon--muted" aria-hidden="true">
+              </button>
+              <div class="media-playback-slider-wrapper${sliderWrapperDisabledClass}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-volume-available="${volumeAvailableAttr}">
+                <input type="range" min="${sliderMin}" max="${sliderMax}" value="${sliderDefault}" class="media-playback-slider" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-device-id="${volumeDeviceId || ''}" data-volume-available="${volumeAvailableAttr}" oninput="handlePlaybackVolumeInput(this)" onchange="handlePlaybackVolumeChange(this)" style="--playback-volume:${sliderPercent}%"${volumeDisabledAttr}>
+              </div>
+            </div>
+          </div>
+        </section>
+        `;
+      }
+
       function renderMediaControlPanel(envKey, controlConfig) {
+        if (envKey === 'ambiente3') {
+          const envName = getTranslatedEnvName(envKey, envKey);
+          const description = controlConfig?.description ? `<p class="media-panel__description">${escapeHtml(controlConfig.description)}</p>` : '';
+
+          const projectorDevices = Array.isArray(controlConfig?.projectors)
+            ? controlConfig.projectors.filter(Boolean)
+            : [];
+          const projectorSection = projectorDevices.length
+            ? renderMediaDeviceSection(envKey, 'projectors', {
+                title: typeof translateText === 'function' ? translateText('Projetores') : 'Projetores',
+                icon: 'icon-projetor.svg',
+                subtitle: '',
+                devices: projectorDevices
+              })
+            : '';
+
+          const tvDevices = Array.isArray(controlConfig?.televisions)
+            ? controlConfig.televisions.filter(Boolean)
+            : [];
+          const tvSection = tvDevices.length
+            ? renderMediaDeviceSection(envKey, 'televisions', {
+                title: typeof translateText === 'function' ? translateText('Televisores') : 'Televisores',
+                icon: 'icon-tv.svg',
+                subtitle: '',
+                devices: tvDevices
+              })
+            : '';
+
+          const computerDevices = Array.isArray(controlConfig?.computers)
+            ? controlConfig.computers.filter(Boolean)
+            : [];
+          const computerSection = computerDevices.length
+            ? renderMediaDeviceSection(envKey, 'computers', {
+                title: typeof translateText === 'function' ? translateText('Computadores') : 'Computadores',
+                icon: 'icon-pc.svg',
+                subtitle: '',
+                devices: computerDevices
+              })
+            : '';
+
+          const playbackConfigs = getPlaybackConfigs(envKey);
+          const playbackSection = playbackConfigs.length
+            ? playbackConfigs.map((cfg) => renderImersaoPlaybackSection(envKey, cfg)).join('')
+            : '';
+
+          return `
+<div class="top-bar-custom"></div>
+
+<div class="page active page-container midia-page ${envKey}-page">
+
+  <div class="page-header">
+    <button class="back-btn" onclick="spaNavigate('${envKey}')">
+      <img src="images/icons/back-button.svg" alt="Voltar">
+    </button>
+    <h1 class="page-title">${envName}</h1>
+  </div>
+
+  <div class="midia-wrapper ambiente-grid media-panel-wrapper">
+    <div class="media-panel">
+      ${description}
+      ${playbackSection}
+      ${projectorSection}
+      ${tvSection}
+        ${computerSection}
+    </div>
+  </div>
+
+</div>
+          `;
+        }
+
         const envName = getTranslatedEnvName(envKey, envKey);
         const mediaLabel = typeof translateText === 'function' ? translateText('Mídia') : 'Mídia';
         const description = controlConfig?.description ? `<p class="media-panel__description">${escapeHtml(controlConfig.description)}</p>` : '';
@@ -2028,6 +2252,8 @@
       }
 
       window.toggleFullscreen = toggleFullscreen;
+      window.handleImersaoPlayback = handleImersaoPlayback;
+      window.updateImersaoPlaybackUI = updateImersaoPlaybackUI;
 
       function handleAppLogoTrigger(event) {
         event.preventDefault();
@@ -2297,18 +2523,18 @@
             </div>
 
             <div class="music-volume-section">
-              <button class="music-volume-mute-btn" id="music-mute" aria-label="Mute" aria-pressed="false" data-device-id="195">
+              <button class="music-volume-mute-btn" id="music-mute" aria-label="Mute" aria-pressed="false" data-device-id="29">
                 <img src="images/icons/icon-volume.svg" alt="Volume" class="volume-icon-unmuted">
                 <img src="images/icons/icon-mute.svg" alt="Mute" class="volume-icon-muted" style="display:none;">
               </button>
               <div class="music-volume-slider-container">
-                <input type="range" min="0" max="100" value="50" class="music-volume-slider" id="music-volume-slider" aria-label="Volume" data-device-id="195">
+                <input type="range" min="0" max="100" value="50" class="music-volume-slider" id="music-volume-slider" aria-label="Volume" data-device-id="29">
               </div>
             </div>
 
             <div class="music-master-controls">
-              <button class="music-master-btn music-master-btn--on music-master-btn--active" id="music-master-on" aria-label="Ligar" aria-pressed="true" data-device-id="195">Ligar</button>
-              <button class="music-master-btn music-master-btn--off" id="music-master-off" aria-label="Desligar" aria-pressed="false" data-device-id="195">Desligar</button>
+              <button class="music-master-btn music-master-btn--on music-master-btn--active" id="music-master-on" aria-label="Ligar" aria-pressed="true" data-device-id="29">Ligar</button>
+              <button class="music-master-btn music-master-btn--off" id="music-master-off" aria-label="Desligar" aria-pressed="false" data-device-id="29">Desligar</button>
             </div>
           </div>
         </div>
@@ -5862,7 +6088,7 @@
               ];
               roomDevices = {
                 ambiente1: ["52", "58", "67"],
-                ambiente2: ["62"],
+                ambiente2: ["52", "62", "55", "54"],
                 ambiente3: [],
                 ambiente4: ["60"],
                 ambiente5: ["64", "61"],

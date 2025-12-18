@@ -339,7 +339,7 @@ const MUSIC_PAGE_ROUTES = [
 
 function isMusicPageActive(hash = window.location.hash) {
   const isActive = MUSIC_PAGE_ROUTES.some((route) => hash.includes(route));
-  console.log("🎵 isMusicPageActive check:", { hash, isActive });
+  console.log("?? isMusicPageActive check:", { hash, isActive });
   return isActive;
 }
 
@@ -583,22 +583,22 @@ async function initializeVarandaDevices() {
   
   // Verificar cooldown para evitar spam de comandos
   if (now - lastVarandaInitTime < VARANDA_INIT_COOLDOWN) {
-    console.log("⏳ [initializeVarandaDevices] Cooldown ativo, ignorando inicialização");
+    console.log("? [initializeVarandaDevices] Cooldown ativo, ignorando inicialização");
     return;
   }
   
-  console.log("🚀 [initializeVarandaDevices] Iniciando dispositivos da Varanda...");
+  console.log("?? [initializeVarandaDevices] Iniciando dispositivos da Varanda...");
   lastVarandaInitTime = now;
   
   const results = await Promise.allSettled(
     VARANDA_INITIALIZE_DEVICE_IDS.map(async (deviceId) => {
       try {
-        console.log(`🔧 [initializeVarandaDevices] Enviando initialize para dispositivo ${deviceId}`);
+        console.log(`?? [initializeVarandaDevices] Enviando initialize para dispositivo ${deviceId}`);
         await sendHubitatCommand(deviceId, "initialize");
-        console.log(`✅ [initializeVarandaDevices] Dispositivo ${deviceId} inicializado com sucesso`);
+        console.log(`? [initializeVarandaDevices] Dispositivo ${deviceId} inicializado com sucesso`);
         return { deviceId, success: true };
       } catch (error) {
-        console.error(`❌ [initializeVarandaDevices] Erro ao inicializar dispositivo ${deviceId}:`, error);
+        console.error(`? [initializeVarandaDevices] Erro ao inicializar dispositivo ${deviceId}:`, error);
         return { deviceId, success: false, error };
       }
     })
@@ -607,7 +607,7 @@ async function initializeVarandaDevices() {
   const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
   const failed = results.length - successful;
   
-  console.log(`🏁 [initializeVarandaDevices] Inicialização concluída: ${successful} sucesso, ${failed} falhas`);
+  console.log(`?? [initializeVarandaDevices] Inicialização concluída: ${successful} sucesso, ${failed} falhas`);
 }
 
 // Função para verificar se estamos entrando no ambiente1 (Varanda)
@@ -720,7 +720,7 @@ function toggleRoomControl(el) {
     })
     .catch((error) => {
       console.error(
-        `⚠️Erro ao enviar comando para dispositivo ${deviceId}:`,
+        `??Erro ao enviar comando para dispositivo ${deviceId}:`,
         error
       );
       // Em caso de erro, reverter o estado visual
@@ -767,7 +767,7 @@ function toggleExclusiveLED(el) {
   // Enviar comando para o LED que foi clicado
   sendHubitatCommand(deviceId, newState === "on" ? "on" : "off")
     .then(() => {
-      console.log(`✅ Comando ${newState} enviado para LED ${deviceId}`);
+      console.log(`? Comando ${newState} enviado para LED ${deviceId}`);
       
       // Se está ligando este LED, desligar o outro após 100ms
       if (newState === "on") {
@@ -775,7 +775,7 @@ function toggleExclusiveLED(el) {
           console.log(`Desligando LED ${otherLedId} automaticamente...`);
           sendHubitatCommand(otherLedId, "off")
             .then(() => {
-              console.log(`✅ LED ${otherLedId} desligado automaticamente`);
+              console.log(`? LED ${otherLedId} desligado automaticamente`);
               setStoredState(otherLedId, "off");
               
               // Atualizar visualmente o outro LED se ele estiver na página
@@ -787,13 +787,13 @@ function toggleExclusiveLED(el) {
               }
             })
             .catch((error) => {
-              console.error(`⚠️ Erro ao desligar LED ${otherLedId}:`, error);
+              console.error(`?? Erro ao desligar LED ${otherLedId}:`, error);
             });
         }, 100);
       }
     })
     .catch((error) => {
-      console.error(`⚠️ Erro ao enviar comando para LED ${deviceId}:`, error);
+      console.error(`?? Erro ao enviar comando para LED ${deviceId}:`, error);
       // Reverter o estado visual em caso de erro
       const revertState = newState === "on" ? "off" : "on";
       el.dataset.state = revertState;
@@ -903,18 +903,18 @@ function tvCommand(el, command) {
   // Marcar comando recente
   recentCommands.set(deviceId, Date.now());
 
-  console.log(`📺 Enviando comando ${command} para dispositivo ${deviceId}`);
+  console.log(`?? Enviando comando ${command} para dispositivo ${deviceId}`);
 
   // Enviar para Hubitat
   sendHubitatCommand(deviceId, command)
     .then(() => {
       console.log(
-        `✅ Comando TV ${command} enviado com sucesso para dispositivo ${deviceId}`
+        `? Comando TV ${command} enviado com sucesso para dispositivo ${deviceId}`
       );
     })
     .catch((error) => {
       console.error(
-        `❌ Erro ao enviar comando TV para dispositivo ${deviceId}:`,
+        `? Erro ao enviar comando TV para dispositivo ${deviceId}:`,
         error
       );
     });
@@ -926,7 +926,7 @@ function tvCommand(el, command) {
 function htvMacroOn() {
   // Usar config.js se disponível
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro HTV: Usando configuração dinâmica...");
+    console.log("?? Macro HTV: Usando configuração dinâmica...");
     executeMacro('varandaHtvOn');
     return;
   }
@@ -935,21 +935,21 @@ function htvMacroOn() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro HTV: Inicializando, ligando TV, setando HDMI 2 e input SAT/CBL...");
+  console.log("?? Macro HTV: Inicializando, ligando TV, setando HDMI 2 e input SAT/CBL...");
 
   // Inicializa TV primeiro
   sendHubitatCommand(TV_ID, "initialize")
     .then(() => {
-      console.log("✅ TV inicializada");
+      console.log("? TV inicializada");
       return sendHubitatCommand(TV_ID, "on");
     })
     .then(() => {
-      console.log("✅ TV ligada");
+      console.log("? TV ligada");
       return sendHubitatCommand(TV_ID, "hdmi2");
     })
     .then(() => {
-      console.log("✅ HDMI 2 selecionado na TV");
-      console.log("⏳ Aguardando 4 segundos antes de setar input SAT/CBL...");
+      console.log("? HDMI 2 selecionado na TV");
+      console.log("? Aguardando 4 segundos antes de setar input SAT/CBL...");
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(sendHubitatCommand(RECEIVER_ID, "setInputSource", "SAT/CBL"));
@@ -957,14 +957,14 @@ function htvMacroOn() {
       });
     })
     .then(() => {
-      console.log("✅ Input SAT/CBL selecionado no Receiver");
+      console.log("? Input SAT/CBL selecionado no Receiver");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro HTV:", error);
-      console.log("🔄 Tentando setar input SAT/CBL mesmo com erro anterior...");
+      console.error("? Erro na macro HTV:", error);
+      console.log("?? Tentando setar input SAT/CBL mesmo com erro anterior...");
       sendHubitatCommand(RECEIVER_ID, "setInputSource", "SAT/CBL")
-        .then(() => console.log("✅ Input SAT/CBL selecionado no Receiver (recuperação)"))
-        .catch((err) => console.error("❌ Erro ao setar input:", err));
+        .then(() => console.log("? Input SAT/CBL selecionado no Receiver (recuperação)"))
+        .catch((err) => console.error("? Erro ao setar input:", err));
     });
 }
 
@@ -973,18 +973,18 @@ function htvMacroOn_old() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro HTV: Ligando TV, setando HDMI 2 e input SAT/CBL...");
+  console.log("?? Macro HTV: Ligando TV, setando HDMI 2 e input SAT/CBL...");
 
   // Liga TV (ou confirma que está ligada)
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV ligada");
+      console.log("? TV ligada");
       // Seta HDMI 2 na TV
       return sendHubitatCommand(TV_ID, "hdmi2");
     })
     .then(() => {
-      console.log("✅ HDMI 2 selecionado na TV");
-      console.log("⏳ Aguardando 4 segundos antes de setar input SAT/CBL...");
+      console.log("? HDMI 2 selecionado na TV");
+      console.log("? Aguardando 4 segundos antes de setar input SAT/CBL...");
       // Aguardar 4 segundos antes de setar input SAT/CBL
       return new Promise((resolve) => {
         setTimeout(() => {
@@ -993,15 +993,15 @@ function htvMacroOn_old() {
       });
     })
     .then(() => {
-      console.log("✅ Input SAT/CBL selecionado no Receiver");
+      console.log("? Input SAT/CBL selecionado no Receiver");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro HTV:", error);
+      console.error("? Erro na macro HTV:", error);
       // Mesmo com erro, tentar setar o input (caso TV já esteja ligada)
-      console.log("🔄 Tentando setar input SAT/CBL mesmo com erro anterior...");
+      console.log("?? Tentando setar input SAT/CBL mesmo com erro anterior...");
       sendHubitatCommand(RECEIVER_ID, "setInputSource", "SAT/CBL")
-        .then(() => console.log("✅ Input SAT/CBL selecionado no Receiver (recuperação)"))
-        .catch((err) => console.error("❌ Erro ao setar input:", err));
+        .then(() => console.log("? Input SAT/CBL selecionado no Receiver (recuperação)"))
+        .catch((err) => console.error("? Erro ao setar input:", err));
     });
 }
 
@@ -1010,7 +1010,7 @@ function telaoMacroOn() {
   const TELAO_ID = "157";
   const RECEIVER_ID = "16";
 
-  console.log("🎬 Macro Telão: Ligando Telão e setando input SAT/CBL...");
+  console.log("?? Macro Telão: Ligando Telão e setando input SAT/CBL...");
 
   // Liga Telão e seta input SAT/CBL no receiver
   Promise.all([
@@ -1018,10 +1018,10 @@ function telaoMacroOn() {
     sendHubitatCommand(RECEIVER_ID, "setInputSource", "SAT/CBL")
   ])
     .then(() => {
-      console.log("✅ Telão ligado e input SAT/CBL selecionado");
+      console.log("? Telão ligado e input SAT/CBL selecionado");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro Telão:", error);
+      console.error("? Erro na macro Telão:", error);
     });
 }
 
@@ -1029,7 +1029,7 @@ function telaoMacroOn() {
 function htvMacroOff() {
   // Usar config.js se disponível
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro HTV Off: Usando configuração dinâmica...");
+    console.log("?? Macro HTV Off: Usando configuração dinâmica...");
     executeMacro('varandaHtvOff');
     return;
   }
@@ -1037,17 +1037,17 @@ function htvMacroOff() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro HTV: Desligando TV e Receiver...");
+  console.log("?? Macro HTV: Desligando TV e Receiver...");
 
   Promise.all([
     sendHubitatCommand(TV_ID, "off"),
     sendHubitatCommand(RECEIVER_ID, "off")
   ])
     .then(() => {
-      console.log("✅ TV e Receiver desligados");
+      console.log("? TV e Receiver desligados");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV/Receiver:", error);
+      console.error("? Erro ao desligar TV/Receiver:", error);
     });
 }
 
@@ -1058,19 +1058,19 @@ function htvMacroOff() {
 // Macro para ligar HTV Suíte Master: Liga TV, aguarda 3s, seleciona HDMI2
 function suiteMasterHtvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte Master HTV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte Master HTV: Usando configuração dinâmica...");
     executeMacro('suiteMasterHtvOn');
     return;
   }
 
   const TV_ID = "183"; // TV Samsung Suíte Master
 
-  console.log("🎬 Macro Suíte Master HTV: Ligando TV e selecionando HDMI2...");
+  console.log("?? Macro Suíte Master HTV: Ligando TV e selecionando HDMI2...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte Master ligada");
-      console.log("⏳ Aguardando 3 segundos antes de selecionar HDMI2...");
+      console.log("? TV Suíte Master ligada");
+      console.log("? Aguardando 3 segundos antes de selecionar HDMI2...");
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(sendHubitatCommand(TV_ID, "hdmi2"));
@@ -1078,73 +1078,73 @@ function suiteMasterHtvOn() {
       });
     })
     .then(() => {
-      console.log("✅ HDMI2 selecionado na TV Suíte Master");
+      console.log("? HDMI2 selecionado na TV Suíte Master");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro Suíte Master HTV:", error);
+      console.error("? Erro na macro Suíte Master HTV:", error);
     });
 }
 
 // Macro para desligar HTV Suíte Master: Apenas desliga TV
 function suiteMasterHtvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte Master HTV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte Master HTV Off: Usando configuração dinâmica...");
     executeMacro('suiteMasterHtvOff');
     return;
   }
 
   const TV_ID = "183"; // TV Samsung Suíte Master
 
-  console.log("🎬 Macro Suíte Master HTV: Desligando TV...");
+  console.log("?? Macro Suíte Master HTV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte Master desligada");
+      console.log("? TV Suíte Master desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte Master:", error);
+      console.error("? Erro ao desligar TV Suíte Master:", error);
     });
 }
 
 // Macro para ligar TV Suíte Master: Apenas liga TV (apps internos)
 function suiteMasterTvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte Master TV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte Master TV: Usando configuração dinâmica...");
     executeMacro('suiteMasterTvOn');
     return;
   }
 
   const TV_ID = "183"; // TV Samsung Suíte Master
 
-  console.log("🎬 Macro Suíte Master TV: Ligando TV...");
+  console.log("?? Macro Suíte Master TV: Ligando TV...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte Master ligada");
+      console.log("? TV Suíte Master ligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao ligar TV Suíte Master:", error);
+      console.error("? Erro ao ligar TV Suíte Master:", error);
     });
 }
 
 // Macro para desligar TV Suíte Master: Apenas desliga TV
 function suiteMasterTvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte Master TV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte Master TV Off: Usando configuração dinâmica...");
     executeMacro('suiteMasterTvOff');
     return;
   }
 
   const TV_ID = "183"; // TV Samsung Suíte Master
 
-  console.log("🎬 Macro Suíte Master TV: Desligando TV...");
+  console.log("?? Macro Suíte Master TV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte Master desligada");
+      console.log("? TV Suíte Master desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte Master:", error);
+      console.error("? Erro ao desligar TV Suíte Master:", error);
     });
 }
 
@@ -1155,19 +1155,19 @@ function suiteMasterTvOff() {
 // Macro para ligar HTV Suíte I: Liga TV, aguarda 3s, seleciona HDMI2
 function suite1HtvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte I HTV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte I HTV: Usando configuração dinâmica...");
     executeMacro('suite1HtvOn');
     return;
   }
 
   const TV_ID = "184"; // TV Samsung Suíte I
 
-  console.log("🎬 Macro Suíte I HTV: Ligando TV e selecionando HDMI2...");
+  console.log("?? Macro Suíte I HTV: Ligando TV e selecionando HDMI2...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte I ligada");
-      console.log("⏳ Aguardando 3 segundos antes de selecionar HDMI2...");
+      console.log("? TV Suíte I ligada");
+      console.log("? Aguardando 3 segundos antes de selecionar HDMI2...");
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(sendHubitatCommand(TV_ID, "hdmi2"));
@@ -1175,73 +1175,73 @@ function suite1HtvOn() {
       });
     })
     .then(() => {
-      console.log("✅ HDMI2 selecionado na TV Suíte I");
+      console.log("? HDMI2 selecionado na TV Suíte I");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro Suíte I HTV:", error);
+      console.error("? Erro na macro Suíte I HTV:", error);
     });
 }
 
 // Macro para desligar HTV Suíte I: Apenas desliga TV
 function suite1HtvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte I HTV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte I HTV Off: Usando configuração dinâmica...");
     executeMacro('suite1HtvOff');
     return;
   }
 
   const TV_ID = "184"; // TV Samsung Suíte I
 
-  console.log("🎬 Macro Suíte I HTV: Desligando TV...");
+  console.log("?? Macro Suíte I HTV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte I desligada");
+      console.log("? TV Suíte I desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte I:", error);
+      console.error("? Erro ao desligar TV Suíte I:", error);
     });
 }
 
 // Macro para ligar TV Suíte I: Apenas liga TV (apps internos)
 function suite1TvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte I TV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte I TV: Usando configuração dinâmica...");
     executeMacro('suite1TvOn');
     return;
   }
 
   const TV_ID = "184"; // TV Samsung Suíte I
 
-  console.log("🎬 Macro Suíte I TV: Ligando TV...");
+  console.log("?? Macro Suíte I TV: Ligando TV...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte I ligada");
+      console.log("? TV Suíte I ligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao ligar TV Suíte I:", error);
+      console.error("? Erro ao ligar TV Suíte I:", error);
     });
 }
 
 // Macro para desligar TV Suíte I: Apenas desliga TV
 function suite1TvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte I TV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte I TV Off: Usando configuração dinâmica...");
     executeMacro('suite1TvOff');
     return;
   }
 
   const TV_ID = "184"; // TV Samsung Suíte I
 
-  console.log("🎬 Macro Suíte I TV: Desligando TV...");
+  console.log("?? Macro Suíte I TV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte I desligada");
+      console.log("? TV Suíte I desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte I:", error);
+      console.error("? Erro ao desligar TV Suíte I:", error);
     });
 }
 
@@ -1252,19 +1252,19 @@ function suite1TvOff() {
 // Macro para ligar HTV Suíte II: Liga TV, aguarda 3s, seleciona HDMI2
 function suite2HtvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte II HTV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte II HTV: Usando configuração dinâmica...");
     executeMacro('suite2HtvOn');
     return;
   }
 
   const TV_ID = "185"; // TV Samsung Suíte II
 
-  console.log("🎬 Macro Suíte II HTV: Ligando TV e selecionando HDMI2...");
+  console.log("?? Macro Suíte II HTV: Ligando TV e selecionando HDMI2...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte II ligada");
-      console.log("⏳ Aguardando 3 segundos antes de selecionar HDMI2...");
+      console.log("? TV Suíte II ligada");
+      console.log("? Aguardando 3 segundos antes de selecionar HDMI2...");
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(sendHubitatCommand(TV_ID, "hdmi2"));
@@ -1272,73 +1272,73 @@ function suite2HtvOn() {
       });
     })
     .then(() => {
-      console.log("✅ HDMI2 selecionado na TV Suíte II");
+      console.log("? HDMI2 selecionado na TV Suíte II");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro Suíte II HTV:", error);
+      console.error("? Erro na macro Suíte II HTV:", error);
     });
 }
 
 // Macro para desligar HTV Suíte II: Apenas desliga TV
 function suite2HtvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte II HTV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte II HTV Off: Usando configuração dinâmica...");
     executeMacro('suite2HtvOff');
     return;
   }
 
   const TV_ID = "185"; // TV Samsung Suíte II
 
-  console.log("🎬 Macro Suíte II HTV: Desligando TV...");
+  console.log("?? Macro Suíte II HTV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte II desligada");
+      console.log("? TV Suíte II desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte II:", error);
+      console.error("? Erro ao desligar TV Suíte II:", error);
     });
 }
 
 // Macro para ligar TV Suíte II: Apenas liga TV (apps internos)
 function suite2TvOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte II TV: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte II TV: Usando configuração dinâmica...");
     executeMacro('suite2TvOn');
     return;
   }
 
   const TV_ID = "185"; // TV Samsung Suíte II
 
-  console.log("🎬 Macro Suíte II TV: Ligando TV...");
+  console.log("?? Macro Suíte II TV: Ligando TV...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV Suíte II ligada");
+      console.log("? TV Suíte II ligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao ligar TV Suíte II:", error);
+      console.error("? Erro ao ligar TV Suíte II:", error);
     });
 }
 
 // Macro para desligar TV Suíte II: Apenas desliga TV
 function suite2TvOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Suíte II TV Off: Usando configuração dinâmica...");
+    console.log("?? Macro Suíte II TV Off: Usando configuração dinâmica...");
     executeMacro('suite2TvOff');
     return;
   }
 
   const TV_ID = "185"; // TV Samsung Suíte II
 
-  console.log("🎬 Macro Suíte II TV: Desligando TV...");
+  console.log("?? Macro Suíte II TV: Desligando TV...");
 
   sendHubitatCommand(TV_ID, "off")
     .then(() => {
-      console.log("✅ TV Suíte II desligada");
+      console.log("? TV Suíte II desligada");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV Suíte II:", error);
+      console.error("? Erro ao desligar TV Suíte II:", error);
     });
 }
 
@@ -1349,7 +1349,7 @@ function suite2TvOff() {
 // Macro para ligar TV e Receiver e setar input TV
 function tvMacroOn() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro TV: Usando configuração dinâmica...");
+    console.log("?? Macro TV: Usando configuração dinâmica...");
     executeMacro('varandaTvOn');
     return;
   }
@@ -1357,12 +1357,12 @@ function tvMacroOn() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro TV: Ligando TV, depois setando input TV...");
+  console.log("?? Macro TV: Ligando TV, depois setando input TV...");
 
   sendHubitatCommand(TV_ID, "on")
     .then(() => {
-      console.log("✅ TV ligada");
-      console.log("⏳ Aguardando 4 segundos antes de setar input TV...");
+      console.log("? TV ligada");
+      console.log("? Aguardando 4 segundos antes de setar input TV...");
       return new Promise((resolve) => {
         setTimeout(() => {
           resolve(sendHubitatCommand(RECEIVER_ID, "setInputSource", "TV"));
@@ -1370,17 +1370,17 @@ function tvMacroOn() {
       });
     })
     .then(() => {
-      console.log("✅ Input TV selecionado no Receiver");
+      console.log("? Input TV selecionado no Receiver");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro TV:", error);
+      console.error("? Erro na macro TV:", error);
     });
 }
 
 // Macro para desligar TV e Receiver
 function tvMacroOff() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro TV Off: Usando configuração dinâmica...");
+    console.log("?? Macro TV Off: Usando configuração dinâmica...");
     executeMacro('varandaTvOff');
     return;
   }
@@ -1388,24 +1388,24 @@ function tvMacroOff() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro TV: Desligando TV e Receiver...");
+  console.log("?? Macro TV: Desligando TV e Receiver...");
 
   Promise.all([
     sendHubitatCommand(TV_ID, "off"),
     sendHubitatCommand(RECEIVER_ID, "off")
   ])
     .then(() => {
-      console.log("✅ TV e Receiver desligados");
+      console.log("? TV e Receiver desligados");
     })
     .catch((error) => {
-      console.error("❌ Erro ao desligar TV/Receiver:", error);
+      console.error("? Erro ao desligar TV/Receiver:", error);
     });
 }
 
 // Macro para ativar Fire TV (HDMI 2 + BD no Receiver)
 function fireTVMacro() {
   if (typeof executeMacro === 'function' && typeof CLIENT_CONFIG !== 'undefined') {
-    console.log("🎬 Macro Fire TV: Usando configuração dinâmica...");
+    console.log("?? Macro Fire TV: Usando configuração dinâmica...");
     executeMacro('fireTV');
     return;
   }
@@ -1413,18 +1413,18 @@ function fireTVMacro() {
   const TV_ID = "111";
   const RECEIVER_ID = "15";
 
-  console.log("🎬 Macro Fire TV: Selecionando HDMI 2 e setando Receiver para BD...");
+  console.log("?? Macro Fire TV: Selecionando HDMI 2 e setando Receiver para BD...");
 
   sendHubitatCommand(TV_ID, "hdmi2")
     .then(() => {
-      console.log("✅ HDMI 2 selecionado na TV");
+      console.log("? HDMI 2 selecionado na TV");
       return sendHubitatCommand(RECEIVER_ID, "setInputSource", "BD");
     })
     .then(() => {
-      console.log("✅ Input BD selecionado no Receiver");
+      console.log("? Input BD selecionado no Receiver");
     })
     .catch((error) => {
-      console.error("❌ Erro na macro Fire TV:", error);
+      console.error("? Erro na macro Fire TV:", error);
     });
 }
 
@@ -1484,7 +1484,7 @@ function initVolumeSlider() {
         console.log(`Ã¢Å“â€¦ Volume do Denon definido para ${value}`);
       })
       .catch((error) => {
-        console.error(`⚠️Erro ao definir volume do Denon:`, error);
+        console.error(`??Erro ao definir volume do Denon:`, error);
       });
   });
 
@@ -1508,7 +1508,7 @@ async function updateDenonVolumeFromServer() {
 
     if (!pollingUrl) {
       console.log(
-        "⚠️não é possível buscar volume em desenvolvimento"
+        "??não é possível buscar volume em desenvolvimento"
       );
       return;
     }
@@ -1583,7 +1583,7 @@ async function updateDenonVolumeFromServer() {
       applyDenonPowerState(powerState);
     }
   } catch (error) {
-    console.error("⚠️Erro ao buscar volume do Denon:", error);
+    console.error("??Erro ao buscar volume do Denon:", error);
   }
 }
 
@@ -1769,10 +1769,10 @@ document.addEventListener("DOMContentLoaded", () => {
   /*
   window.addEventListener("hashchange", () => {
     const newHash = window.location.hash;
-    console.log("🏠 [hashchange] Verificando se é ambiente1:", newHash);
+    console.log("?? [hashchange] Verificando se é ambiente1:", newHash);
     
     if (isEnteringVaranda(newHash)) {
-      console.log("🏠 [hashchange] Entrando na Varanda - iniciando dispositivos...");
+      console.log("?? [hashchange] Entrando na Varanda - iniciando dispositivos...");
       // Pequeno delay para garantir que a página carregou
       setTimeout(() => {
         initializeVarandaDevices();
@@ -1783,14 +1783,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Listener específico para página de música
   window.addEventListener("hashchange", () => {
-    console.log("🎵 [hashchange] Hash mudou para:", window.location.hash);
+    console.log("?? [hashchange] Hash mudou para:", window.location.hash);
     const isMusicActive = isMusicPageActive();
-    console.log("🎵 [hashchange] isMusicPageActive:", isMusicActive);
+    console.log("?? [hashchange] isMusicPageActive:", isMusicActive);
     
     if (isMusicActive) {
-      console.log("🎵 [hashchange] Iniciando player de música em 300ms...");
+      console.log("?? [hashchange] Iniciando player de música em 300ms...");
       setTimeout(() => {
-        console.log("🎵 [hashchange] Executando initMusicPlayerUI...");
+        console.log("?? [hashchange] Executando initMusicPlayerUI...");
         initMusicPlayerUI();
         updateDenonMetadata();
         startMusicMetadataPolling();
@@ -2293,7 +2293,7 @@ function initAirConditionerControl() {
   
   // Atualizar o ID do AC para o ambiente atual
   AC_DEVICE_ID = getACDeviceIdForCurrentRoute();
-  console.log(`🌡️ AC inicializado para ambiente: ${currentRoute}, Device ID: ${AC_DEVICE_ID}`);
+  console.log(`??? AC inicializado para ambiente: ${currentRoute}, Device ID: ${AC_DEVICE_ID}`);
 
   // Configurações específicas por ambiente - todos usam 18-25
   const tempConfig = { minTemp: 18, maxTemp: 25, defaultTemp: 22 };
@@ -3502,25 +3502,9 @@ safeLog("=== AMBIENTE DETECTADO ===", {
   isIOS,
   userAgent: navigator.userAgent.substring(0, 60) + "...",
 });
-const HUBITAT_PROXY_URL = "/functions/hubitat-proxy";
-const POLLING_URL = "/functions/polling";
+const HUBITAT_PROXY_URL = "/api/hubitat-proxy";
+const POLLING_URL = "/api/polling";
 window.musicPlayerUI = window.musicPlayerUI || {};
-
-// Hubitat Cloud (Maker API) configuration
-const HUBITAT_CLOUD_ENABLED = true;
-const HUBITAT_CLOUD_APP_BASE_URL =
-  "https://cloud.hubitat.com/api/e45cb756-9028-44c2-8a00-e6fb3651856c/apps/15";
-const HUBITAT_CLOUD_ACCESS_TOKEN = "1d9b367b-e4cd-4042-b726-718b759a82ef";
-const HUBITAT_CLOUD_DEVICES_BASE_URL = `${HUBITAT_CLOUD_APP_BASE_URL}/devices`;
-const HUBITAT_CLOUD_DEVICE_IDS = new Set(["109", "115", "116", "119"]);
-
-function useHubitatCloud(deviceId) {
-  return (
-    HUBITAT_CLOUD_ENABLED &&
-    deviceId !== undefined &&
-    HUBITAT_CLOUD_DEVICE_IDS.has(String(deviceId))
-  );
-}
 
 const TEXT_MOJIBAKE_REGEX = /[\u00C3\u00C2\u00E2\uFFFD]/;
 const TEXT_MOJIBAKE_REPLACEMENTS = [
@@ -3669,7 +3653,7 @@ function showErrorMessage(message) {
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     `;
 
-  const header = trUi("⚠️Erro de Conexão");
+  const header = trUi("??Erro de Conexão");
   const body = trUi(message);
   const closeLabel = trUi("Fechar");
 
@@ -3759,15 +3743,15 @@ async function testHubitatConnection() {
         console.log("Ã¢Å“â€¦ Conexão OK - Dados:", data);
         return true;
       } catch (e) {
-        console.error("⚠️Resposta não é JSON vÃƒÂ¡lido:", e);
+        console.error("??Resposta não é JSON vÃƒÂ¡lido:", e);
         return false;
       }
     } else {
-      console.error("⚠️Erro HTTP:", response.status, response.statusText);
+      console.error("??Erro HTTP:", response.status, response.statusText);
       return false;
     }
   } catch (error) {
-    console.error("⚠️Erro na Conexão:", error);
+    console.error("??Erro na Conexão:", error);
     return false;
   }
 }
@@ -3778,23 +3762,15 @@ function urlDeviceInfo(deviceId) {
 }
 
 function urlSendCommand(deviceId, command, value) {
-  if (useHubitatCloud(deviceId)) {
-    let url = `${HUBITAT_CLOUD_DEVICES_BASE_URL}/${encodeURIComponent(
-      deviceId
-    )}`;
-
-    if (command) {
-      url += `/${encodeURIComponent(command)}`;
-
-      if (value !== undefined && value !== null && value !== "") {
-        url += `/${encodeURIComponent(value)}`;
-      }
-    }
-
-    const separator = url.includes("?") ? "&" : "?";
-    return `${url}${separator}access_token=${encodeURIComponent(
-      HUBITAT_CLOUD_ACCESS_TOKEN
-    )}`;
+  if (Array.isArray(value)) {
+    const [v1, v2] = value;
+    return `${HUBITAT_PROXY_URL}?device=${deviceId}&command=${encodeURIComponent(
+      command
+    )}${
+      v1 !== undefined && v1 !== null ? `&value=${encodeURIComponent(v1)}` : ""
+    }${
+      v2 !== undefined && v2 !== null ? `&value2=${encodeURIComponent(v2)}` : ""
+    }`;
   }
 
   return `${HUBITAT_PROXY_URL}?device=${deviceId}&command=${encodeURIComponent(
@@ -3802,27 +3778,35 @@ function urlSendCommand(deviceId, command, value) {
   )}${value !== undefined ? `&value=${encodeURIComponent(value)}` : ""}`;
 }
 
-async function sendHubitatCommand(deviceId, command, value) {
+async function sendHubitatCommandLegacy(deviceId, command, value) {
+  const valueLog =
+    value === undefined
+      ? undefined
+      : Array.isArray(value)
+      ? value.filter((v) => v !== undefined && v !== null).join(",")
+      : value;
+
   console.log(
-    `📡 [sendHubitatCommand] Enviando comando: ${command} para dispositivo ${deviceId}${
-      value !== undefined ? ` com valor ${value}` : ""
+    `?? [sendHubitatCommand] Enviando comando: ${command} para dispositivo ${deviceId}${
+      valueLog !== undefined ? ` com valor ${valueLog}` : ""
     }`
   );
+
+  const requestUrl = urlSendCommand(deviceId, command, value);
 
   try {
     // Se estivermos em produção, tenta usar o proxy primeiro
     if (isProduction) {
-      const proxyUrl = `${HUBITAT_PROXY_URL}?device=${deviceId}&command=${encodeURIComponent(
-        command
-      )}${value !== undefined ? `&value=${encodeURIComponent(value)}` : ""}`;
-
-      console.log(`📡 [sendHubitatCommand] URL do proxy: ${proxyUrl}`);
+      console.log(`?? [sendHubitatCommand] URL do proxy: ${proxyUrl}`);
 
       try {
         const response = await fetch(proxyUrl);
         const text = await response.text();
 
-        console.log(`📡 [sendHubitatCommand] Resposta do proxy (status ${response.status}):`, text.substring(0, 200));
+        console.log(
+          `?? [sendHubitatCommand] Resposta do proxy (status ${response.status}):`,
+          text.substring(0, 200)
+        );
 
         // Verifica se a resposta é HTML (indica que a Function não está funcionando)
         if (text.trim().startsWith("<!DOCTYPE") || text.includes("<html")) {
@@ -3832,10 +3816,19 @@ async function sendHubitatCommand(deviceId, command, value) {
         }
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          let serverMsg = null;
+          try {
+            const parsed = JSON.parse(text);
+            serverMsg = parsed?.error || parsed?.details || null;
+          } catch (_e) {}
+          throw new Error(
+            serverMsg
+              ? `HTTP ${response.status}: ${serverMsg}`
+              : `HTTP error! status: ${response.status}`
+          );
         }
 
-        console.log("📡 [sendHubitatCommand] Comando enviado com sucesso via proxy");
+        console.log("?? [sendHubitatCommand] Comando enviado com sucesso via proxy");
 
         // ATUALIZAÇÃO INSTANTÂNEA: Atualiza o estado local e força sync rápido
         if (command === "on" || command === "off") {
@@ -3846,7 +3839,7 @@ async function sendHubitatCommand(deviceId, command, value) {
             updateDeviceStatesFromServer({ skipSchedule: false });
           }
           console.log(
-            `✅ [sendHubitatCommand] Estado atualizado localmente e polling reajustado: ${deviceId} -> ${command}`
+            `? [sendHubitatCommand] Estado atualizado localmente e polling reajustado: ${deviceId} -> ${command}`
           );
         }
 
@@ -3857,20 +3850,89 @@ async function sendHubitatCommand(deviceId, command, value) {
           return null; // Comando executado mas sem resposta JSON
         }
       } catch (error) {
-        console.log("📡 [sendHubitatCommand] Proxy falhou:", error.message);
+        proxyFailureReason = error?.message || String(error);
+        console.log("?? [sendHubitatCommand] Proxy falhou:", proxyFailureReason);
       }
     }
 
-    throw new Error("Proxy indisponível e acesso direto desativado");
+    throw new Error(
+      `Proxy indisponível${
+        proxyFailureReason ? ` (${proxyFailureReason})` : ""
+      } e acesso direto desativado`
+    );
   } catch (error) {
-    console.error("📡 [sendHubitatCommand] Erro ao enviar comando:", error);
+    console.error("?? [sendHubitatCommand] Erro ao enviar comando:", error);
+    throw error;
+  }
+}
+
+async function sendHubitatCommand(deviceId, command, value) {
+  const valueLog =
+    value === undefined
+      ? undefined
+      : Array.isArray(value)
+      ? value.filter((v) => v !== undefined && v !== null).join(",")
+      : value;
+
+  console.log(
+    `?? [sendHubitatCommand] Enviando comando: ${command} para dispositivo ${deviceId}${
+      valueLog !== undefined ? ` com valor ${valueLog}` : ""
+    }`
+  );
+
+  const requestUrl = urlSendCommand(deviceId, command, value);
+
+  try {
+    console.log(`?? [sendHubitatCommand] URL: ${requestUrl}`);
+
+    const response = await fetch(requestUrl);
+    const text = await response.text();
+
+    console.log(
+      `?? [sendHubitatCommand] Resposta (status ${response.status}):`,
+      text.substring(0, 200)
+    );
+
+    if (text.trim().startsWith("<!DOCTYPE") || text.includes("<html")) {
+      throw new Error("Endpoint de proxy retornou HTML (verifique server.js)");
+    }
+
+    if (!response.ok) {
+      let serverMsg = null;
+      try {
+        const parsed = JSON.parse(text);
+        serverMsg = parsed?.error || parsed?.details || null;
+      } catch (_e) {}
+      throw new Error(
+        serverMsg
+          ? `HTTP ${response.status}: ${serverMsg}`
+          : `HTTP error! status: ${response.status}`
+      );
+    }
+
+    if (command === "on" || command === "off") {
+      setStoredState(deviceId, command);
+      updateDeviceUI(deviceId, command, true);
+      currentPollingInterval = POLLING_INTERVAL_BASE_MS;
+      if (typeof updateDeviceStatesFromServer === "function") {
+        updateDeviceStatesFromServer({ skipSchedule: false });
+      }
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  } catch (error) {
+    console.error("?? [sendHubitatCommand] Erro ao enviar comando:", error);
     throw error;
   }
 }
 
 // --- Cortinas (abrir/parar/fechar) ---
 function sendCurtainCommand(deviceId, action, commandName) {
-  if (useHubitatCloud(deviceId)) {
+  if (false) {
     const commandMap = {
       open: "open",
       stop: "stop",
@@ -3889,7 +3951,7 @@ function sendCurtainCommand(deviceId, action, commandName) {
     // Cortina com comandos invertidos (exemplo: device ID 40)
     map = { open: 3, stop: 2, close: 1 };
     console.log(
-      `🪟 Cortina com comandos invertidos (ID ${deviceId}): comando ${action} mapeado para valor ${map[action]}`
+      `?? Cortina com comandos invertidos (ID ${deviceId}): comando ${action} mapeado para valor ${map[action]}`
     );
   } else {
     // Padrão para todas as outras cortinas
@@ -3907,22 +3969,22 @@ function curtainAction(el, action) {
       el?.dataset?.deviceId ||
       el.closest("[data-device-id]")?.dataset?.deviceId;
     
-    console.log(`🪟 curtainAction chamada: action=${action}, id=${id}, el=`, el);
+    console.log(`?? curtainAction chamada: action=${action}, id=${id}, el=`, el);
     
     if (!id) {
-      console.error("🪟 ERRO: ID do dispositivo não encontrado!");
+      console.error("?? ERRO: ID do dispositivo não encontrado!");
       return;
     }
     
     // Suporte a comandos diretos push1, push2, push3, push4
     if (action.startsWith('push')) {
-      console.log(`🪟 Cortina (ID ${id}): enviando comando direto ${action}`);
+      console.log(`?? Cortina (ID ${id}): enviando comando direto ${action}`);
       return sendHubitatCommand(id, action)
         .then(result => {
-          console.log(`🪟 Comando ${action} enviado com sucesso para ID ${id}:`, result);
+          console.log(`?? Comando ${action} enviado com sucesso para ID ${id}:`, result);
         })
         .catch(err => {
-          console.error(`🪟 ERRO ao enviar comando ${action} para ID ${id}:`, err);
+          console.error(`?? ERRO ao enviar comando ${action} para ID ${id}:`, err);
         });
     }
     
@@ -4019,7 +4081,7 @@ function setMasterButtonLoading(button, isLoading) {
   } else {
     button.classList.remove("loading");
     button.dataset.loading = "false";
-    console.log("⚠️Loading desativado - classes:", button.className);
+    console.log("??Loading desativado - classes:", button.className);
   }
 }
 
@@ -4211,7 +4273,7 @@ async function updateDeviceStatesFromServer(options = {}) {
     }
     
     // DEBUG: Verificar estados salvos após polling
-    console.log('🔵 [POLLING FINAL] Estados salvos:', {
+    console.log('?? [POLLING FINAL] Estados salvos:', {
       '52': getStoredState('52'),
       '58': getStoredState('58'),
       '67': getStoredState('67')
@@ -4224,7 +4286,7 @@ async function updateDeviceStatesFromServer(options = {}) {
       error.message.includes("JSON.parse") ||
       error.message.includes("unexpected character")
     ) {
-      console.error("PARANDO POLLING - Cloudflare Functions não funcionam");
+      console.error("PARANDO POLLING - endpoint de polling indisponível");
       stopPolling();
       return;
     }
@@ -4377,7 +4439,7 @@ function anyOn(deviceIds) {
   // Log apenas para ambiente1 (Prólogo)
   if (deviceIds && deviceIds.length > 0 && ['52', '58', '67'].includes(String(deviceIds[0]))) {
     const states = deviceIds.map(id => `${id}:${getStoredState(id) || 'off'}`).join(', ');
-    console.log(`🔍 [anyOn] IDs=[${deviceIds.join(',')}], states=[${states}], result=${result}`);
+    console.log(`?? [anyOn] IDs=[${deviceIds.join(',')}], states=[${states}], result=${result}`);
   }
   
   return result;
@@ -4385,18 +4447,18 @@ function anyOn(deviceIds) {
 
 // Função para inicializar e sincronizar estados dos botÃƒÂµes master na home
 function initHomeMasters() {
-  console.log("🏠 Inicializando botões master da home...");
+  console.log("?? Inicializando botões master da home...");
   
   // Aguardar um pouco para garantir que o DOM está pronto
   setTimeout(() => {
     const masterButtons = document.querySelectorAll(".room-master-btn");
     
     if (masterButtons.length === 0) {
-      console.log("⚠️ Nenhum botão master encontrado");
+      console.log("?? Nenhum botão master encontrado");
       return;
     }
     
-    console.log(`✅ Encontrados ${masterButtons.length} botões master`);
+    console.log(`? Encontrados ${masterButtons.length} botões master`);
     
     masterButtons.forEach((btn) => {
       // Limpar estado de pending
@@ -4417,7 +4479,7 @@ function initHomeMasters() {
       console.log(`  ${route}: ${ids.length} luzes, estado = ${state}`);
     });
     
-    console.log("✅ Botões master sincronizados!");
+    console.log("? Botões master sincronizados!");
   }, 100);
 }
 
@@ -4454,7 +4516,7 @@ function getCurtainState(curtainId) {
   try {
     return localStorage.getItem(`curtain_${curtainId}_state`) || "closed";
   } catch (error) {
-    console.error("⚠️Erro ao obter estado da cortina:", error);
+    console.error("??Erro ao obter estado da cortina:", error);
     return "closed";
   }
 }
@@ -4548,7 +4610,7 @@ function onHomeMasterClick(event, button) {
   console.log("Ã°Å¸â€Â Device IDs encontrados:", deviceIds);
 
   if (deviceIds.length === 0) {
-    console.log("⚠️Nenhum device ID encontrado");
+    console.log("??Nenhum device ID encontrado");
     return;
   }
 
@@ -4606,7 +4668,7 @@ function onHomeCurtainMasterClick(event, button) {
   console.log("Ã°Å¸â€Â Curtain IDs encontrados:", curtainIds);
 
   if (curtainIds.length === 0) {
-    console.log("⚠️Nenhum curtain ID encontrado");
+    console.log("??Nenhum curtain ID encontrado");
     return;
   }
 
@@ -4692,7 +4754,7 @@ function showLoader() {
       console.warn("Ã¢Å¡Â Ã¯Â¸Â Elemento loader não encontrado");
     }
   } catch (error) {
-    console.error("⚠️Erro ao mostrar loader:", error);
+    console.error("??Erro ao mostrar loader:", error);
   }
 }
 
@@ -4800,7 +4862,7 @@ async function loadAllDeviceStatesGlobally() {
         updateDeviceUI(deviceId, storedState, true); // forceUpdate = true
         loadedCount++;
       } catch (e) {
-        console.warn(`⚠️Erro ao processar ${deviceId}:`, e);
+        console.warn(`??Erro ao processar ${deviceId}:`, e);
       }
 
       const progress = 20 + ((index + 1) / ALL_LIGHT_IDS.length) * 80;
@@ -4903,7 +4965,7 @@ async function loadAllDeviceStatesGlobally() {
 
           return response;
         } catch (error) {
-          console.warn(`⚠️Tentativa ${attempt} falhou:`, error.message);
+          console.warn(`??Tentativa ${attempt} falhou:`, error.message);
 
           if (attempt === maxRetries) {
             throw new Error(
@@ -4968,13 +5030,13 @@ async function loadAllDeviceStatesGlobally() {
         responseText.trim().startsWith("<html")
       ) {
         console.error(
-          "⚠️CRÍTICO: Cloudflare Functions não estão funcionando!"
+          "??CRÍTICO: endpoint de polling não está funcionando!"
         );
         console.error(
-          "⚠️O servidor está retornando HTML em vez de executar as Functions."
+          "??O servidor está retornando HTML em vez de executar as Functions."
         );
         console.error(
-          "⚠️Implementando fallback automático para API direta do Hubitat..."
+          "??Implementando fallback automático para API direta do Hubitat..."
         );
 
         // FALLBACK AUTOMÃƒÂTICO: Usar API direta do Hubitat
@@ -5029,7 +5091,7 @@ async function loadAllDeviceStatesGlobally() {
           );
           return true;
         } catch (fallbackError) {
-          console.error("⚠️Fallback também falhou:", fallbackError);
+          console.error("??Fallback também falhou:", fallbackError);
 
           // ÃƒÅ¡ltimo recurso: usar estados salvos
           console.log(
@@ -5050,9 +5112,9 @@ async function loadAllDeviceStatesGlobally() {
       data = JSON.parse(responseText);
       console.log("Ã°Å¸â€œÂ¡ JSON parseado com sucesso");
     } catch (jsonError) {
-      console.error("⚠️Erro ao parsear JSON:", jsonError);
+      console.error("??Erro ao parsear JSON:", jsonError);
       console.error(
-        "⚠️ConteÃƒÂºdo da resposta que falhou:",
+        "??ConteÃƒÂºdo da resposta que falhou:",
         responseText?.substring(0, 200)
       );
       throw new Error(`Resposta invÃƒÂ¡lida do servidor: ${jsonError.message}`);
@@ -5061,7 +5123,7 @@ async function loadAllDeviceStatesGlobally() {
 
     // Normalização do formato de resposta:
     // Formato antigo esperado: { devices: { id: { state, success } } }
-    // Novo formato (Cloudflare Function refatorada): { success:true, data:[ { id, attributes:[{name:'switch', currentValue:'on'}] } ] }
+    // Novo formato (proxy local): { success:true, data:[ { id, attributes:[{name:'switch', currentValue:'on'}] } ] }
     // Formato alternativo: resposta é um array puro de devices
     if (!data.devices) {
       try {
@@ -5073,14 +5135,14 @@ async function loadAllDeviceStatesGlobally() {
 
         if (list) {
           console.log(
-            "🧠 Normalizando",
+            "?? Normalizando",
             list.length,
             "dispositivos do formato novo..."
           );
           const mapped = {};
           list.forEach((d, index) => {
             if (!d || !d.id) {
-              console.warn(`⚠️ Dispositivo ${index} inválido:`, d);
+              console.warn(`?? Dispositivo ${index} inválido:`, d);
               return;
             }
 
@@ -5099,7 +5161,7 @@ async function loadAllDeviceStatesGlobally() {
                 console.log(`Ã°Å¸â€œâ€¹ Device ${d.id}: switch=${state}`);
               } else {
                 console.log(
-                  `💡 Device ${d.id}: não é lâmpada (sem atributo 'switch'), pulando...`
+                  `?? Device ${d.id}: não é lâmpada (sem atributo 'switch'), pulando...`
                 );
                 return; // Pular dispositivos sem switch (botÃƒÂµes, sensores, etc.)
               }
@@ -5125,7 +5187,7 @@ async function loadAllDeviceStatesGlobally() {
           );
         }
       } catch (normError) {
-        console.error("⚠️Falha ao normalizar resposta:", normError);
+        console.error("??Falha ao normalizar resposta:", normError);
         throw normError;
       }
     }
@@ -5217,7 +5279,7 @@ async function loadAllDeviceStatesGlobally() {
     console.log("Ã¢Å“â€¦ Carregamento global  concluído com sucesso");
     return true;
   } catch (error) {
-    console.error("⚠️Erro no carregamento global:", error);
+    console.error("??Erro no carregamento global:", error);
 
     // Tentar diagnÃƒÂ³stico automÃƒÂ¡tico da Conexão
     try {
@@ -5225,7 +5287,7 @@ async function loadAllDeviceStatesGlobally() {
       const connectionTest = await testHubitatConnection();
       if (!connectionTest) {
         showErrorMessage(
-          "Falha na Conexão com Hubitat. Verifique se as Configurações foram alteradas no painel do Cloudflare."
+          "Falha na Conexão com Hubitat. Verifique as configurações do servidor local."
         );
       }
     } catch (diagError) {
@@ -5256,7 +5318,7 @@ async function loadAllDeviceStatesGlobally() {
         "Problema no servidor. Usando últimos dados conhecidos."
       );
     } else {
-      console.warn("⚠️Erro desconhecido no carregamento:", error.message);
+      console.warn("??Erro desconhecido no carregamento:", error.message);
       updateProgress(60, "Erro geral - usando backup...");
       showErrorMessage("Erro no carregamento. Usando dados salvos localmente.");
     }
@@ -5320,7 +5382,7 @@ function checkMobileCompatibility() {
   }
 
   if (issues.length > 0) {
-    console.error("⚠️Problemas crÃƒÂ­ticos detectados:", issues);
+    console.error("??Problemas crÃƒÂ­ticos detectados:", issues);
     return false;
   }
 
@@ -5447,18 +5509,18 @@ function updateLightFeatureIcons(forceUpdate = false) {
 
   cards.forEach(function (card) {
     const ids = collectLightFeatureIds(card);
-    console.log(`💡 [updateLightFeatureIcons] Card ${card.dataset.env}: ${ids.length} IDs`);
+    console.log(`?? [updateLightFeatureIcons] Card ${card.dataset.env}: ${ids.length} IDs`);
     
     if (!ids || ids.length === 0) return;
 
     const state = anyOn(ids) ? "on" : "off";
-    console.log(`💡 [updateLightFeatureIcons] Card ${card.dataset.env}: estado=${state}, atual=${card.dataset.state}`);
+    console.log(`?? [updateLightFeatureIcons] Card ${card.dataset.env}: estado=${state}, atual=${card.dataset.state}`);
     
     if (forceUpdate || card.dataset.state !== state) {
-      console.log(`💡 [updateLightFeatureIcons] ✅ Atualizando card ${card.dataset.env} → ${state}`);
+      console.log(`?? [updateLightFeatureIcons] ? Atualizando card ${card.dataset.env} ? ${state}`);
       setLightFeatureIcon(card, state);
     } else {
-      console.log(`💡 [updateLightFeatureIcons] ⏭️  Card ${card.dataset.env} já está correto`);
+      console.log(`?? [updateLightFeatureIcons] ??  Card ${card.dataset.env} já está correto`);
     }
   });
 }
@@ -5664,7 +5726,7 @@ window.debugEletrize = {
       sessionStorage.clear();
       console.log("Ã¢Å“â€¦ Cache mobile limpo! Recarregue a página.");
     } catch (e) {
-      console.error("⚠️Erro ao limpar cache:", e);
+      console.error("??Erro ao limpar cache:", e);
     }
   },
   forceMobileReload: () => {
@@ -5728,7 +5790,7 @@ window.debugEletrize = {
       const response = await fetch(testUrl, fetchConfig);
       console.log("Ã¢Å“â€¦ Fetch test:", response.status, response.statusText);
     } catch (error) {
-      console.error("⚠️Fetch test failed:", error);
+      console.error("??Fetch test failed:", error);
     }
   },
 };
@@ -5737,9 +5799,9 @@ window.debugEletrize = {
 
 // Função para atualizar metadados do Denon
 function updateDenonMetadata() {
-  console.log("🎵 [updateDenonMetadata] INICIANDO - Hash atual:", window.location.hash);
+  console.log("?? [updateDenonMetadata] INICIANDO - Hash atual:", window.location.hash);
 
-  // Pedir ao Cloudflare function para retornar o JSON completo do Hubitat
+  // Pedir ao proxy local para retornar o JSON completo do Hubitat
   // (a function usa a variÃƒÂ¡vel HUBITAT_FULL_URL do ambiente quando configurada)
   fetch(`${POLLING_URL}?full=1`)
     .then(async (response) => {
@@ -5855,14 +5917,14 @@ function updateDenonMetadata() {
             const albumArtValue = rawAlbumArt.trim();
             if (albumArtValue.startsWith('http://') || albumArtValue.startsWith('https://')) {
               albumArt = albumArtValue;
-              console.log("🎵 [array] albumArt é URL direta:", albumArt);
+              console.log("?? [array] albumArt é URL direta:", albumArt);
             } else if (albumArtValue.includes('<img') || albumArtValue.includes('src=')) {
               const imgMatch = albumArtValue.match(/src=['"]([^'"]+)['"]/);
               albumArt = imgMatch ? imgMatch[1] : null;
-              console.log("🎵 [array] albumArt extraído de HTML:", albumArt);
+              console.log("?? [array] albumArt extraído de HTML:", albumArt);
             } else {
               albumArt = albumArtValue;
-              console.log("🎵 [array] albumArt valor direto:", albumArt);
+              console.log("?? [array] albumArt valor direto:", albumArt);
             }
           }
           
@@ -5896,18 +5958,18 @@ function updateDenonMetadata() {
             // Se já começa com http/https, é uma URL direta
             if (albumArtValue.startsWith('http://') || albumArtValue.startsWith('https://')) {
               albumArt = albumArtValue;
-              console.log("🎵 albumArt é URL direta:", albumArt);
+              console.log("?? albumArt é URL direta:", albumArt);
             } 
             // Senão, tentar extrair de tag HTML <img src="...">
             else if (albumArtValue.includes('<img') || albumArtValue.includes('src=')) {
               const imgMatch = albumArtValue.match(/src=['"]([^'"]+)['"]/);
               albumArt = imgMatch ? imgMatch[1] : null;
-              console.log("🎵 albumArt extraído de HTML:", albumArt);
+              console.log("?? albumArt extraído de HTML:", albumArt);
             }
             // Pode ser um caminho relativo ou outro formato
             else {
               albumArt = albumArtValue;
-              console.log("🎵 albumArt valor direto:", albumArt);
+              console.log("?? albumArt valor direto:", albumArt);
             }
           }
 
@@ -5966,7 +6028,7 @@ function updateDenonMetadata() {
           }
         }
 
-        console.log("🎵 Metadados extraídos:", {
+        console.log("?? Metadados extraídos:", {
           artist,
           track,
           album,
@@ -5975,7 +6037,7 @@ function updateDenonMetadata() {
         
         // Debug: se albumArt não foi encontrado, listar todos os atributos disponíveis
         if (!albumArt) {
-          console.log("⚠️ Album art não encontrado. Atributos disponíveis no dispositivo 29:");
+          console.log("?? Album art não encontrado. Atributos disponíveis no dispositivo 29:");
           if (Array.isArray(denonDevice.attributes)) {
             denonDevice.attributes.forEach(attr => {
               const name = attr.name?.toLowerCase() || '';
@@ -6010,7 +6072,7 @@ function updateDenonMetadata() {
       }
     })
     .catch((error) => {
-      console.error("⚠️Erro ao buscar metadados do Denon:", error);
+      console.error("??Erro ao buscar metadados do Denon:", error);
       // Tentar logar a resposta bruta para debug adicional via endpoint de polling
       fetch(`${POLLING_URL}?full=1`)
         .then((res) => res.text())
@@ -6323,7 +6385,7 @@ function initMusicPlayerUI() {
         setPlaying(!isPlaying);
       })
       .catch((err) =>
-        console.error("⚠️Erro ao enviar comando " + action + ":", err)
+        console.error("??Erro ao enviar comando " + action + ":", err)
       );
   });
 
@@ -6335,7 +6397,7 @@ function initMusicPlayerUI() {
     sendHubitatCommand(DENON_MUSIC_DEVICE_ID, "nextTrack")
       .then(() => console.log("Ã¢Å“â€¦ Comando nextTrack enviado com sucesso"))
       .catch((err) =>
-        console.error("⚠️Erro ao enviar comando nextTrack:", err)
+        console.error("??Erro ao enviar comando nextTrack:", err)
       );
   });
 
@@ -6349,7 +6411,7 @@ function initMusicPlayerUI() {
         console.log("Ã¢Å“â€¦ Comando previousTrack enviado com sucesso")
       )
       .catch((err) =>
-        console.error("⚠️Erro ao enviar comando previousTrack:", err)
+        console.error("??Erro ao enviar comando previousTrack:", err)
       );
   });
 
@@ -6371,7 +6433,7 @@ function initMusicPlayerUI() {
           setMuted(newMutedState);
         })
         .catch((err) =>
-          console.error(`⚠️Erro ao enviar comando ${command}:`, err)
+          console.error(`??Erro ao enviar comando ${command}:`, err)
         );
     });
 
@@ -6426,7 +6488,7 @@ function initMusicPlayerUI() {
           )
           .catch((err) =>
             console.error(
-              "⚠️Error sending setVolume from music slider:",
+              "??Error sending setVolume from music slider:",
               err
             )
           );
@@ -6484,7 +6546,7 @@ function initMusicPlayerUI() {
             setMasterPower(true);
           })
           .catch((err) =>
-            console.error("⚠️Erro ao enviar comando on:", err)
+            console.error("??Erro ao enviar comando on:", err)
           );
       }
     });
@@ -6501,7 +6563,7 @@ function initMusicPlayerUI() {
             setMasterPower(false);
           })
           .catch((err) =>
-            console.error("⚠️Erro ao enviar comando off:", err)
+            console.error("??Erro ao enviar comando off:", err)
           );
       }
     });
@@ -6591,7 +6653,7 @@ function initUltraBasicMode() {
     return true; // Sucesso
   } catch (error) {
     showMobileDebug(
-      "⚠️ERRO CRÃƒÂTICO no modo ultra-bÃƒÂ¡sico: " + error.message,
+      "??ERRO CRÃƒÂTICO no modo ultra-bÃƒÂ¡sico: " + error.message,
       "error"
     );
     return false; // Falha
@@ -6634,7 +6696,7 @@ function initSimpleMode() {
       try {
         updateDeviceUI(deviceId, "off", true);
       } catch (e) {
-        console.error("⚠️Erro no device", deviceId + ":", e);
+        console.error("??Erro no device", deviceId + ":", e);
       }
     }
 
@@ -6669,7 +6731,7 @@ function initSimpleMode() {
           startPolling(); // Ativar polling completo mesmo no modo simples
           console.log("Ã¢Å“â€¦ Polling ativo no modo simples");
         } catch (e) {
-          console.error("⚠️Erro ao iniciar polling no modo simples:", e);
+          console.error("??Erro ao iniciar polling no modo simples:", e);
         }
       } else {
         console.log(
@@ -6686,9 +6748,9 @@ function initSimpleMode() {
       }, 1000);
     }, 2000); // Aguardar 2s para estabilizar antes do polling
   } catch (error) {
-    console.error("⚠️ERRO CRÃƒÂTICO no modo simples:", error);
-    console.error("⚠️Erro stack:", error.stack);
-    console.error("⚠️Erro linha:", error.lineNumber || "desconhecida");
+    console.error("??ERRO CRÃƒÂTICO no modo simples:", error);
+    console.error("??Erro stack:", error.stack);
+    console.error("??Erro linha:", error.lineNumber || "desconhecida");
 
     // Ativar modo ultra-bÃƒÂ¡sico como fallback
     console.log("Ã°Å¸Å¡Â¨ Ativando modo ultra-bÃƒÂ¡sico...");
@@ -6808,7 +6870,7 @@ function initializeApp() {
                 setTimeout(startPolling, pollingDelay);
               } else {
                 console.log(
-                  "⚠️POLLING NÃƒÆ’O INICIADO - não está em produÃƒÂ§ÃƒÂ£o:",
+                  "??POLLING NÃƒÆ’O INICIADO - não está em produÃƒÂ§ÃƒÂ£o:",
                   {
                     isProduction: isProduction,
                     hostname: location.hostname,
@@ -6895,7 +6957,7 @@ window.showErrorMessage = showErrorMessage;
 
 // Funções master de cortinas (abrir/fechar todas)
 function handleMasterCurtainsOpen() {
-  console.log("🎬 Abrindo todas as cortinas...");
+  console.log("?? Abrindo todas as cortinas...");
   const btn = document.getElementById("master-curtains-open-btn");
   if (btn) {
     btn.classList.add("loading");
@@ -6919,11 +6981,11 @@ function handleMasterCurtainsOpen() {
     }
   }, 2000);
   
-  console.log(`✅ Comando de abertura enviado para ${curtainIds.size} cortinas`);
+  console.log(`? Comando de abertura enviado para ${curtainIds.size} cortinas`);
 }
 
 function handleMasterCurtainsClose() {
-  console.log("🎬 Fechando todas as cortinas...");
+  console.log("?? Fechando todas as cortinas...");
   const btn = document.getElementById("master-curtains-close-btn");
   if (btn) {
     btn.classList.add("loading");
@@ -6947,7 +7009,7 @@ function handleMasterCurtainsClose() {
     }
   }, 2000);
   
-  console.log(`✅ Comando de fechamento enviado para ${curtainIds.size} cortinas`);
+  console.log(`? Comando de fechamento enviado para ${curtainIds.size} cortinas`);
 }
 
 // --- Conforto Options Logic ---
@@ -6981,8 +7043,9 @@ function getConfortoElements(envKey) {
   const card = container.querySelector('.conforto-card');
   const optionsId = card?.dataset?.confortoOptions;
   const drawer = optionsId ? document.getElementById(optionsId) : container.querySelector('.conforto-options');
-  const powerBtn = container.querySelector('.conforto-action-btn--power');
-  return { container, card, drawer, optionsId, powerBtn };
+  const onBtn = container.querySelector('.conforto-action-btn--on');
+  const offBtn = container.querySelector('.conforto-action-btn--off');
+  return { container, card, drawer, optionsId, onBtn, offBtn };
 }
 
 function getPrimaryConfortoDeviceId(envKey) {
@@ -7003,14 +7066,18 @@ function setConfortoPowerState(envKey, isOn) {
 
   confortoUIState[envKey].powered = Boolean(isOn);
 
-  const { card, powerBtn } = getConfortoElements(envKey);
+  const { card, onBtn, offBtn } = getConfortoElements(envKey);
   if (card) {
     card.classList.toggle('is-on', Boolean(isOn));
     card.setAttribute('data-conforto-state', isOn ? 'on' : 'off');
   }
-  if (powerBtn) {
-    powerBtn.classList.toggle('is-pressed', Boolean(isOn));
-    powerBtn.setAttribute('aria-pressed', Boolean(isOn).toString());
+  if (onBtn) {
+    onBtn.classList.toggle('is-pressed', Boolean(isOn));
+    onBtn.setAttribute('aria-pressed', Boolean(isOn).toString());
+  }
+  if (offBtn) {
+    offBtn.classList.toggle('is-pressed', !Boolean(isOn));
+    offBtn.setAttribute('aria-pressed', (!Boolean(isOn)).toString());
   }
 }
 
@@ -7040,7 +7107,7 @@ function toggleConfortoOptions(optionsId, envKey) {
 }
 
 async function handleConfortoAction(envKey, action) {
-  console.log(`❄️ Conforto Action: ${action} for ${envKey}`);
+  console.log(`?? Conforto Action: ${action} for ${envKey}`);
 
   if (!CLIENT_CONFIG?.environments?.[envKey]) {
     console.error('Environment not found:', envKey);
@@ -7058,14 +7125,12 @@ async function handleConfortoAction(envKey, action) {
   let desiredPowerState = null;
   let powerCommand = null;
 
-  if (action === 'power') {
-    const primaryDeviceId = getPrimaryConfortoDeviceId(envKey);
-    const currentState = primaryDeviceId ? getStoredState(primaryDeviceId) : null;
-    const isOff = !currentState || currentState === 'off';
-    desiredPowerState = isOff;
-    powerCommand = isOff ? 'on' : 'off';
-  } else if (action === 'cool' || action === 'heat') {
-    desiredPowerState = true;
+  if (action === 'on' || action === 'off') {
+    desiredPowerState = action === 'on';
+    powerCommand = action;
+  } else {
+    console.warn('Ação de conforto inválida:', action);
+    return;
   }
 
   for (const zone of zones) {
@@ -7073,17 +7138,10 @@ async function handleConfortoAction(envKey, action) {
     if (!deviceId) continue;
 
     try {
-      if (action === 'power' && powerCommand) {
+      if (powerCommand) {
         console.log(`Sending ${powerCommand} to AC ${deviceId}`);
         await sendHubitatCommand(deviceId, powerCommand);
-        // Atualizar estado armazenado para o toggle funcionar
         setStoredState(deviceId, powerCommand);
-      } else if (action === 'cool') {
-        console.log(`Setting AC ${deviceId} to COOL @ temp18`);
-        await sendHubitatCommand(deviceId, 'temp18');
-      } else if (action === 'heat') {
-        console.log(`Setting AC ${deviceId} to HEAT @ 25°C`);
-        await sendHubitatCommand(deviceId, 'temp25');
       }
     } catch (err) {
       console.error(`Error controlling AC ${deviceId}:`, err);
@@ -7099,33 +7157,28 @@ async function handleConfortoAction(envKey, action) {
 }
 
 function updateConfortoButtonStates(envKey, action, isPowerOn) {
-  // Atualizar botão power
-  const powerBtn = document.querySelector(`[data-conforto-power-btn="${envKey}"]`);
-  if (powerBtn) {
-    if (action === 'power') {
-      powerBtn.classList.toggle('is-pressed', isPowerOn);
-      powerBtn.setAttribute('aria-pressed', String(isPowerOn));
-      
-      // Se desligou o power, soltar os botões cool/heat
-      if (!isPowerOn) {
-        const modeBtns = document.querySelectorAll(`[data-conforto-mode-btn="${envKey}"]`);
-        modeBtns.forEach(btn => {
-          btn.classList.remove('is-pressed');
-          btn.setAttribute('aria-pressed', 'false');
-        });
-      }
-    }
-  }
+  const onBtn = document.querySelector(`[data-conforto-on-btn="${envKey}"]`);
+  const offBtn = document.querySelector(`[data-conforto-off-btn="${envKey}"]`);
 
-  // Atualizar botões de modo (cool/heat) - mutuamente exclusivos
-  if (action === 'cool' || action === 'heat') {
-    const modeBtns = document.querySelectorAll(`[data-conforto-mode-btn="${envKey}"]`);
-    modeBtns.forEach(btn => {
-      const btnMode = btn.getAttribute('data-mode');
-      const isActive = btnMode === action;
-      btn.classList.toggle('is-pressed', isActive);
-      btn.setAttribute('aria-pressed', String(isActive));
-    });
+  if (action === 'on' || action === 'off') {
+    if (onBtn) {
+      onBtn.classList.toggle('is-pressed', action === 'on');
+      onBtn.setAttribute('aria-pressed', String(action === 'on'));
+    }
+    if (offBtn) {
+      offBtn.classList.toggle('is-pressed', action === 'off');
+      offBtn.setAttribute('aria-pressed', String(action === 'off'));
+    }
+  } else {
+    // fallback para refletir estado geral
+    if (onBtn) {
+      onBtn.classList.toggle('is-pressed', Boolean(isPowerOn));
+      onBtn.setAttribute('aria-pressed', String(Boolean(isPowerOn)));
+    }
+    if (offBtn) {
+      offBtn.classList.toggle('is-pressed', !Boolean(isPowerOn));
+      offBtn.setAttribute('aria-pressed', String(!Boolean(isPowerOn)));
+    }
   }
 }
 

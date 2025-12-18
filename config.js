@@ -225,6 +225,9 @@ const CLIENT_CONFIG = {
             lights: [
                 { id: "52", name: "Spots Focal" },
                 { id: "58", name: "Spots" },
+                { id: "62", name: "Spots Circulação" },
+                { id: "53", name: "Spots Parede" },
+                { id: "70", name: "LED Dicróica" },
                 { id: "67", name: "Sanca Central" }
             ],
             // Ar-condicionado
@@ -274,9 +277,12 @@ const CLIENT_CONFIG = {
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
             },
             lights: [
+                { id: "52", name: "Spots Focal" },
                 { id: "62", name: "Spots" },
-                { id: "55", name: "LED Quente" },
-                { id: "54", name: "LED Frio" }
+                { id: "53", name: "Spots Parede" },
+                { id: "54", name: "LED Quente" },
+                { id: "55", name: "LED Frio" },
+                { id: "60", name: "Spots Pesquisa" }
             ],
             airConditioner: {
                 zones: [
@@ -299,7 +305,8 @@ const CLIENT_CONFIG = {
             photoFilename: "projecao.webp",
             photoAlt: "Projeção",
             features: {
-                feature1: { label: "Mídia", icon: "icon-media.svg", route: "midia" },
+                feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" },
+                feature2: { label: "Mídia", icon: "icon-media.svg", route: "midia" },
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
             },
             // ┌─────────────────────────────────────────────────────────────────┐
@@ -328,6 +335,17 @@ const CLIENT_CONFIG = {
                     volumeLabel: "Volume geral"
                 }
             },
+            lights: [
+                { id: "55", name: "LED Frio" },
+                { id: "54", name: "LED Quente" },
+                { id: "62", name: "Spots Circulação" },
+                { id: "52", name: "Spots Focal" },
+                { id: "60", name: "Spots Pesquisa" },
+                { id: "53", name: "Spots Parede" },
+                { id: "40", name: "Spots Maquete" },
+                { id: "45", name: "Sanca" },
+                { id: "70", name: "LED Dicróica" }
+            ]
         },
 
         // AMBIENTE 4 ─────────────────────────────────────────────────────────────
@@ -366,7 +384,8 @@ const CLIENT_CONFIG = {
             },
             lights: [
                 { id: "60", name: "Spots" },
-                { id: "53", name: "Sanca Parede" }
+                { id: "53", name: "Sanca Parede" },
+                { id: "70", name: "LED Dicróica" }
             ],
             curtains: [],
             airConditioner: {
@@ -407,7 +426,8 @@ const CLIENT_CONFIG = {
             },
             lights: [
                 { id: "64", name: "Led Parede" },
-                { id: "61", name: "Spots" }
+                { id: "61", name: "Spots" },
+                { id: "40", name: "Spots Maquete" }
             ],
             curtains: [],
             airConditioner: null,
@@ -468,7 +488,11 @@ const CLIENT_CONFIG = {
             },
             lights: [
                 { id: "40", name: "Spots" },
-                { id: "44", name: "Spots TV" }
+                { id: "44", name: "Spots TV" },
+                { id: "43", name: "Spots Cultura" },
+                { id: "45", name: "Sanca" },
+                { id: "61", name: "Spots" },
+                { id: "64", name: "Led Parede" }
             ],
             curtains: [],
             airConditioner: {
@@ -503,7 +527,12 @@ const CLIENT_CONFIG = {
                     volumeLabel: "Volume geral"
                 }
             },
-            lights: [],
+            lights: [
+                { id: "40", name: "Spots" },
+                { id: "44", name: "Spots TV" },
+                { id: "45", name: "Sanca" },
+                { id: "43", name: "Spots Cultura" }
+            ],
             curtains: [],
             airConditioner: null,
             tv: null,
@@ -569,7 +598,9 @@ const CLIENT_CONFIG = {
             },
             lights: [
                 { id: "40", name: "Spots" },
-                { id: "44", name: "Spots TV" }
+                { id: "44", name: "Spots TV" },
+                { id: "45", name: "Sanca" },
+                { id: "43", name: "Spots Cultura" }
             ],
             curtains: [],
             airConditioner: {
@@ -606,9 +637,11 @@ const CLIENT_CONFIG = {
             lights: [
                 { id: "45", name: "Led Prateleira" },
                 { id: "43", name: "Spots" },
-                { id: "57", name: "Led" },
-                { id: "63", name: "Led" },
-                { id: "59", name: "Spots Prateleira" },
+                { id: "57", name: "LED Direita" },
+                { id: "63", name: "LED Esquerda" },
+                { id: "59", name: "Spots Focal" },
+                { id: "66", name: "Trilho" },
+                { id: "53", name: "LED Dicróica" }
             ],
             curtains: [
                 { id: "192", name: "Veneziana 1", type: "veneziana" },
@@ -666,7 +699,8 @@ const CLIENT_CONFIG = {
                 { id: "42", name: "Led Nicho" },
                 { id: "41", name: "Spots" },
                 { id: "65", name: "Sanca" },
-                { id: "66", name: "Trilho" }
+                { id: "66", name: "Spot Focal" },
+                { id: "71", name: "LED Móvel" }
             ],
             curtains: [
                 { id: "194", name: "Veneziana", type: "veneziana" }
@@ -683,31 +717,6 @@ const CLIENT_CONFIG = {
                 hasMacro: true,
                 macroName: "suite2"
             },
-            htv: null,
-            audio: null
-        },
-
-        // AMBIENTE 11 ────────────────────────────────────────────────────────────
-        ambiente11: {
-            name: "Banheiros",
-            visible: true,
-            order: 11,
-            hasPhoto: true,
-            photoFilename: "Banheiros.webp",
-            photoAlt: "Banheiros",
-            features: {
-                feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" }
-            },
-            lights: [
-                { id: "49", name: "Barra Led e Exaustor Feminino" },
-                { id: "47", name: "Barra Led e Exaustor Masculino" },
-                { id: "48", name: "Espelho e Spots Feminino" },
-                { id: "46", name: "Espelho e Spots Masculino" },
-                { id: "50", name: "Plafon e Led PCD" }
-            ],
-            curtains: [],
-            airConditioner: null,
-            tv: null,
             htv: null,
             audio: null
         }
@@ -760,6 +769,15 @@ const CLIENT_CONFIG = {
     // Cenários são ações pré-configuradas que acionam múltiplos dispositivos
     // ═══════════════════════════════════════════════════════════════════════════
     
+    // Ações de cenários (botão simples no Hubitat)
+    // Usado por scenes.js para os botões "Inicializar" e "Dormir":
+    //   scenarioActions: {
+    //     inicializar: { deviceId: "264", button: 1 }, // vira: push 1
+    //     dormir: { deviceId: "264", button: 2 }       // vira: push 2
+    //   }
+    scenarioActions: {
+    },
+
     scenes: {
         // Cenário: Todas as Luzes Ligadas
         allLightsOn: {

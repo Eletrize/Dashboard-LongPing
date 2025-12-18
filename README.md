@@ -36,8 +36,8 @@ Dashboard de automação para controle de ambientes via Hubitat.
    ```
 
 5. **Acesse o dashboard**:
-   - Abra o navegador em: `http://localhost:3000`
-   - Para acessar de outros dispositivos na rede: `http://SEU_IP:3000`
+   - Abra o navegador em: `http://localhost:8080`
+   - Para acessar de outros dispositivos na rede: `http://SEU_IP:8080`
 
 ### Configuração do Hubitat
 
@@ -45,7 +45,7 @@ No arquivo `.env`, configure:
 
 ```env
 # Porta do servidor (padrão: 3000)
-PORT=3000
+PORT=8080
 
 # URL base da API do Hubitat
 # Opção 1 - Cloud (funciona de qualquer lugar):
@@ -94,7 +94,7 @@ pm2 save
 
 ```
 Dashboard-LongPing/
-├── server.js          # Servidor Express (substitui Cloudflare)
+├── server.js          # Servidor local (Node)
 ├── .env               # Configurações locais (não commitado)
 ├── .env.example       # Exemplo de configuração
 ├── config.js          # Configuração de ambientes e dispositivos
@@ -102,7 +102,7 @@ Dashboard-LongPing/
 ├── script.js          # Lógica do frontend
 ├── styles.css         # Estilos
 ├── images/            # Imagens e ícones
-└── functions/         # Funções Cloudflare (para deploy cloud)
+
 ```
 
 ## 🔧 Scripts Disponíveis
@@ -111,9 +111,6 @@ Dashboard-LongPing/
 |---------|-----------|
 | `npm start` | Inicia o servidor local |
 | `npm run dev` | Mesmo que start (desenvolvimento) |
-| `npm run dev:watch` | Inicia com auto-reload (Node 18+) |
-| `npm run cloudflare:dev` | Inicia servidor Cloudflare local |
-| `npm run cloudflare:deploy` | Deploy para Cloudflare Pages |
 
 ## 📱 Acesso pela Rede Local
 
@@ -126,7 +123,7 @@ Para acessar de tablets/celulares na mesma rede:
 
 2. Acesse pelo navegador do dispositivo:
    ```
-   http://192.168.X.X:3000
+   http://192.168.X.X:8080
    ```
 
 ## 🐛 Solução de Problemas

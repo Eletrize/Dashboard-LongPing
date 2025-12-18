@@ -35,6 +35,7 @@ function handleHubitatProxy(req, res) {
   const device = url.searchParams.get('device');
   const command = url.searchParams.get('command');
   const value = url.searchParams.get('value');
+  const value2 = url.searchParams.get('value2');
 
   if (!device || !command) {
     res.writeHead(400, { 
@@ -57,6 +58,9 @@ function handleHubitatProxy(req, res) {
   
   if (value !== null && value !== undefined) {
     cmdUrl += `/${encodeURIComponent(value)}`;
+    if (value2 !== null && value2 !== undefined) {
+      cmdUrl += `/${encodeURIComponent(value2)}`;
+    }
   }
   
   cmdUrl += `?access_token=${HUBITAT_ACCESS_TOKEN}`;
@@ -120,15 +124,15 @@ function handlePolling(req, res) {
 
 
 const server = http.createServer((req, res) => {
-  // ========== HUBITAT PROXY ENDPOINTS ==========
-  
-  // Proxy para comandos Hubitat
-  if (req.url.startsWith('/functions/hubitat-proxy')) {
+// ========== HUBITAT API ENDPOINTS ==========
+
+  // Comandos Hubitat (Maker API proxy)
+  if (req.url.startsWith('/api/hubitat-proxy')) {
     return handleHubitatProxy(req, res);
   }
-  
-  // Proxy para polling (estados)
-  if (req.url.startsWith('/functions/polling')) {
+
+  // Polling (estados) via proxy
+  if (req.url.startsWith('/api/polling')) {
     return handlePolling(req, res);
   }
 

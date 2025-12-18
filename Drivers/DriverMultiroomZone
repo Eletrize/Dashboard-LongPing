@@ -1,0 +1,132 @@
+/**
+ *  AAT Multiroom Zone Child
+ *  Child device para zona individual do amplificador AAT
+ *
+ *  Versao: 2.0
+ *  Data: 2024-11
+ */
+
+metadata {
+    definition(name: "AAT Multiroom Zone v2", namespace: "trato.aat", author: "VH") {
+        capability "Switch"
+        capability "AudioVolume"
+        capability "Actuator"
+        capability "Sensor"
+        capability "Refresh"
+
+        command "selectInput", [[name: "input*", type: "NUMBER", description: "Input (1-8)"]]
+        command "nextInput"
+        command "prevInput"
+        command "setBass", [[name: "bass*", type: "NUMBER", description: "Bass (0-14, 7=0dB)"]]
+        command "setTreble", [[name: "treble*", type: "NUMBER", description: "Treble (0-14, 7=0dB)"]]
+        command "setBalance", [[name: "balance*", type: "NUMBER", description: "Balance (0-20, 10=center)"]]
+
+        attribute "zone", "number"
+        attribute "input", "number"
+        attribute "bass", "number"
+        attribute "treble", "number"
+        attribute "balance", "number"
+    }
+}
+
+/* ===================== Lifecycle ===================== */
+def installed() {
+    updateZoneAttribute()
+}
+
+def updated() {
+    updateZoneAttribute()
+}
+
+private void updateZoneAttribute() {
+    Integer z = getZoneNumber()
+    sendEvent(name: "zone", value: z)
+}
+
+/* ===================== Controle basico ===================== */
+def refresh() {
+    parent?.getZoneStatus(getZoneNumber())
+}
+
+def on() {
+    parent?.powerOn()
+}
+
+def off() {
+    parent?.powerOff()
+}
+
+def powerToggle() {
+    parent?.powerToggle()
+}
+
+/* ===================== Volume/Mute ===================== */
+def setVolume(volume) {
+    parent?.setZoneVolume(getZoneNumber(), volume)
+}
+
+def volumeUp() {
+    parent?.volumeUpZone(getZoneNumber())
+}
+
+def volumeDown() {
+    parent?.volumeDownZone(getZoneNumber())
+}
+
+def mute() {
+    parent?.muteZone(getZoneNumber())
+}
+
+def unmute() {
+    parent?.unmuteZone(getZoneNumber())
+}
+
+def toggleMute() {
+    parent?.toggleMuteZone(getZoneNumber())
+}
+
+def setMute(Boolean muted) {
+    muted ? mute() : unmute()
+}
+
+/* ===================== Entradas ===================== */
+def selectInput(input) {
+    parent?.selectInput(getZoneNumber(), input)
+}
+
+def nextInput() {
+    parent?.nextInput(getZoneNumber())
+}
+
+def prevInput() {
+    parent?.prevInput(getZoneNumber())
+}
+
+/* ===================== EQ ===================== */
+def setBass(bass) {
+    parent?.setBass(getZoneNumber(), bass)
+}
+
+def setTreble(treble) {
+    parent?.setTreble(getZoneNumber(), treble)
+}
+
+def setBalance(balance) {
+    parent?.setBalance(getZoneNumber(), balance)
+}
+
+/* ===================== Utilitarios ===================== */
+private Integer getZoneNumber() {
+    def stored = device.getDataValue("zone")
+    if (stored) {
+        return stored as Integer
+    }
+    String dni = device.deviceNetworkId
+    if (dni?.contains("-Z")) {
+        try {
+            return (dni.split("-Z")[-1]) as Integer
+        } catch (Exception ignored) {
+        }
+    }
+    return 1
+}

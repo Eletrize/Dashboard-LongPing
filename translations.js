@@ -69,6 +69,7 @@ const TRANSLATIONS = {
   'Computadores': { en: 'Computers', zh: '电脑' },
   'Ligar': { en: 'On', zh: '开启' },
   'Desligar': { en: 'Off', zh: '关闭' },
+  'Parar': { en: 'Stop', zh: '停止' },
   'Conectado': { en: 'Connected', zh: '已连接' },
   'Conectados': { en: 'Connected', zh: '已连接' },
   'Música': { en: 'Music', zh: '音乐' },
@@ -87,6 +88,7 @@ const TRANSLATIONS = {
 
   'Luzes': { en: 'Lights', zh: '灯光' },
   'Spots': { en: 'Spotlights', zh: '射灯' },
+  'Spots Focal': { en: 'Focal Spots', zh: '焦点射灯' },
   'Spots Corredor': { en: 'Hallway Spots', zh: '过道射灯' },
   'LED': { en: 'LED Strip', zh: '灯带' },
   'LED Nicho': { en: 'Niche LED', zh: '壁龛灯带' },
@@ -218,9 +220,9 @@ const TRANSLATIONS = {
   },
   '⚠️Erro de Conexão': { en: '⚠️Connection Error', zh: '⚠️连接错误' },
   'Fechar': { en: 'Close', zh: '关闭' },
-  'Falha na Conexão com Hubitat. Verifique se as Configurações foram alteradas no painel do Cloudflare.': {
-    en: 'Hubitat connection failed. Check whether settings changed in the Cloudflare dashboard.',
-    zh: '连接 Hubitat 失败。请检查 Cloudflare 面板中的设置是否已修改。'
+  'Falha na Conexão com Hubitat. Verifique as configurações do servidor local.': {
+    en: 'Hubitat connection failed. Check the local server configuration.',
+    zh: '连接 Hubitat 失败。请检查本地服务器配置。'
   },
   'Timeout na Conexão. Verifique sua internet e tente novamente.': {
     en: 'Connection timeout. Check your internet and try again.',
