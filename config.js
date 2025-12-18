@@ -500,7 +500,8 @@ const CLIENT_CONFIG = {
                     { id: "", name: "Televisão 2"}
                 ],
                 computers: [
-                    { id: "", name: "Computador" }
+                    { id: "", name: "Mapa" },
+                    { id: "", name: "Parede" }
                 ],
                 playback: {
                     powerDevices: [],
