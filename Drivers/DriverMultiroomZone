@@ -1,139 +1,49 @@
 /**
- *  AAT Multiroom Zone Child
- *  Child device para zona individual do amplificador AAT
+ * AAT Multiroom Zone - Child (Component Dimmer)
  *
- *  Versao: 2.0
- *  Data: 2024-11
+ * Este driver é opcional. O `Drivers/DriverMultiroom` (parent) pode criar childs
+ * usando o driver interno "Generic Component Dimmer", mas este arquivo existe
+ * para quem preferir um child customizado no Hubitat.
+ *
+ * Semântica (igual ao MultiroomFinalDriver):
+ * - `setLevel(0..100)` controla volume da zona
+ * - `off()` = mute
+ * - `on()`  = unmute
  */
 
 metadata {
-    definition(name: "AAT Multiroom Zone v2", namespace: "trato.aat", author: "VH") {
+    definition(name: "AAT Multiroom Zone (Component Dimmer)", namespace: "Eletrize", author: "PH") {
         capability "Switch"
         capability "SwitchLevel"
-        capability "AudioVolume"
+        capability "Refresh"
         capability "Actuator"
         capability "Sensor"
-        capability "Refresh"
-
-        command "selectInput", [[name: "input*", type: "NUMBER", description: "Input (1-8)"]]
-        command "nextInput"
-        command "prevInput"
-        command "setBass", [[name: "bass*", type: "NUMBER", description: "Bass (0-14, 7=0dB)"]]
-        command "setTreble", [[name: "treble*", type: "NUMBER", description: "Treble (0-14, 7=0dB)"]]
-        command "setBalance", [[name: "balance*", type: "NUMBER", description: "Balance (0-20, 10=center)"]]
-
-        attribute "zone", "number"
-        attribute "input", "number"
-        attribute "bass", "number"
-        attribute "treble", "number"
-        attribute "balance", "number"
     }
 }
 
-/* ===================== Lifecycle ===================== */
-def installed() {
-    updateZoneAttribute()
-}
-
-def updated() {
-    updateZoneAttribute()
-}
-
-private void updateZoneAttribute() {
-    Integer z = getZoneNumber()
-    sendEvent(name: "zone", value: z)
-}
-
-/* ===================== Controle basico ===================== */
 def refresh() {
-    parent?.getZoneStatus(getZoneNumber())
+    parent?.componentRefresh(device)
 }
 
 def on() {
-    // Neste child, Switch representa MUTE (on = unmute)
-    parent?.unmuteZone(getZoneNumber())
+    parent?.componentOn(device)
 }
 
 def off() {
-    // Neste child, Switch representa MUTE (off = mute)
-    parent?.muteZone(getZoneNumber())
-}
-
-def powerToggle() {
-    parent?.toggleMuteZone(getZoneNumber())
-}
-
-/* ===================== Volume/Mute ===================== */
-def setVolume(volume) {
-    parent?.setZoneVolume(getZoneNumber(), volume)
+    parent?.componentOff(device)
 }
 
 def setLevel(level) {
-    parent?.setZoneVolume(getZoneNumber(), level)
+    parent?.componentSetLevel(device, level)
 }
 
-def volumeUp() {
-    parent?.volumeUpZone(getZoneNumber())
+// Compatibilidade com chamadas que passam duração (dimmer padrão aceita)
+def setLevel(level, duration) {
+    parent?.componentSetLevel(device, level)
 }
 
-def volumeDown() {
-    parent?.volumeDownZone(getZoneNumber())
+// Alias comum em dashboards/integrações
+def setVolume(volume) {
+    setLevel(volume)
 }
 
-def mute() {
-    parent?.muteZone(getZoneNumber())
-}
-
-def unmute() {
-    parent?.unmuteZone(getZoneNumber())
-}
-
-def toggleMute() {
-    parent?.toggleMuteZone(getZoneNumber())
-}
-
-def setMute(Boolean muted) {
-    muted ? mute() : unmute()
-}
-
-/* ===================== Entradas ===================== */
-def selectInput(input) {
-    parent?.selectInput(getZoneNumber(), input)
-}
-
-def nextInput() {
-    parent?.nextInput(getZoneNumber())
-}
-
-def prevInput() {
-    parent?.prevInput(getZoneNumber())
-}
-
-/* ===================== EQ ===================== */
-def setBass(bass) {
-    parent?.setBass(getZoneNumber(), bass)
-}
-
-def setTreble(treble) {
-    parent?.setTreble(getZoneNumber(), treble)
-}
-
-def setBalance(balance) {
-    parent?.setBalance(getZoneNumber(), balance)
-}
-
-/* ===================== Utilitarios ===================== */
-private Integer getZoneNumber() {
-    def stored = device.getDataValue("zone")
-    if (stored) {
-        return stored as Integer
-    }
-    String dni = device.deviceNetworkId
-    if (dni?.contains("-Z")) {
-        try {
-            return (dni.split("-Z")[-1]) as Integer
-        } catch (Exception ignored) {
-        }
-    }
-    return 1
-}

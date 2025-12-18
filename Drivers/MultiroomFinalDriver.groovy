@@ -516,4 +516,3 @@ private void logDebug(String msg) { if (settings.logDebug) log.debug "${device.d
 private void logTrace(String msg) { if (settings.logTrace) log.trace "${device.displayName}: ${msg}" }
 private void logWarn(String msg)  { log.warn "${device.displayName}: ${msg}" }
 private void logError(String msg) { log.error "${device.displayName}: ${msg}" }
-
