@@ -218,8 +218,11 @@ const CLIENT_CONFIG = {
                 televisions: [
                     { id: "69", name: "Telão Entrada" }
                 ],
+                computers: [
+                    { id: "", name: "Computador" }
+                ],
                 playback: {
-                    powerDevices: ["216", "217"],
+                    powerDevices: [],
                     transportDeviceId: "12",
                     volumeDeviceId: ["216", "217"],
                     volumeLabel: "Volume geral (Z1+Z2)"
@@ -384,7 +387,7 @@ const CLIENT_CONFIG = {
                     { id: "", name: "Computador" }
                 ],
                 playback: {
-                    powerDevices: ["218"],
+                    powerDevices: [],
                     transportDeviceId: "125",
                     volumeDeviceId: ["218"],
                     volumeLabel: "Volume geral (Zona 3)"
@@ -500,7 +503,7 @@ const CLIENT_CONFIG = {
                     { id: "", name: "Computador" }
                 ],
                 playback: {
-                    powerDevices: [""],
+                    powerDevices: [],
                     transportDeviceId: "",
                     volumeDeviceId: "131",
                     volumeLabel: "Volume geral"
@@ -545,7 +548,7 @@ const CLIENT_CONFIG = {
                 projectors: [],
                 televisions: [],
                 playback: {
-                    powerDevices: ["127"],
+                    powerDevices: [],
                     transportDeviceId: "127",
                     volumeDeviceId: "",
                     volumeLabel: "Volume geral"
@@ -609,7 +612,7 @@ const CLIENT_CONFIG = {
                     {
                         key: "player1",
                         label: "Processo Direita",
-                        powerDevices: ["206"],
+                        powerDevices: [],
                         transportDeviceId: "129",
                         volumeDeviceId: ["206"],
                         volumeLabel: "Volume Processo Direita"
@@ -617,7 +620,7 @@ const CLIENT_CONFIG = {
                     {
                         key: "player2",
                         label: "Processo Esquerda",
-                        powerDevices: ["207"],
+                        powerDevices: [],
                         transportDeviceId: "128",
                         volumeDeviceId: ["207"],
                         volumeLabel: "Volume Processo Esquerda"
@@ -721,7 +724,7 @@ const CLIENT_CONFIG = {
                     { id: "124", name: "TV", description: "Televisão principal" }
                 ],
                 playback: {
-                    powerDevices: ["219"],
+                    powerDevices: [],
                     transportDeviceId: "126",
                     volumeDeviceId: ["219"],
                     volumeLabel: "Volume geral (Zona 4)"
