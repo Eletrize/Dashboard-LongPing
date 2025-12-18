@@ -640,7 +640,7 @@ const CLIENT_CONFIG = {
                 { id: "57", name: "LED Direita" },
                 { id: "63", name: "LED Esquerda" },
                 { id: "59", name: "Spots Focal" },
-                { id: "66", name: "Trilho" },
+                { id: "68", name: "Trilho LED" },
                 { id: "53", name: "LED Dicróica" }
             ],
             curtains: [
