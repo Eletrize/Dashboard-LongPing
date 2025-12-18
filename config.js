@@ -215,10 +215,10 @@ const CLIENT_CONFIG = {
                     { id: "69", name: "Telão Entrada" }
                 ],
                 playback: {
-                    powerDevices: ["12"],
-                    transportDeviceId: "12",
-                    volumeDeviceId: "132",
-                    volumeLabel: "Volume geral"
+                    powerDevices: ["216", "217"],
+                    transportDeviceId: null,
+                    volumeDeviceId: ["216", "217"],
+                    volumeLabel: "Volume geral (Z1+Z2)"
                 }
             },
             // IDs das luzes deste ambiente (para controle individual e master)
