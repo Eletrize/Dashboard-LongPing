@@ -430,6 +430,17 @@ function collectEnvironmentSceneCommands(envKey) {
 
   const env = CLIENT_CONFIG.environments[envKey];
 
+  const startPush = env.sceneButtons?.start;
+  if (startPush && startPush.deviceId) {
+    const button = startPush.button || startPush.push || "1";
+    return [{
+      deviceId: String(startPush.deviceId),
+      command: "push",
+      label: `Start ${env.key}`,
+      value: button
+    }];
+  }
+
   const configuredAction = normalizeSceneAction(
     env.sceneActions?.on || env.sceneAction?.on || env.sceneCommand?.on,
     `Cenário ${getEnvironmentDisplayName(envKey)} (ON)`
@@ -534,6 +545,17 @@ function collectEnvironmentSceneOffCommands(envKey) {
   }
 
   const env = CLIENT_CONFIG.environments[envKey];
+
+  const stopPush = env.sceneButtons?.stop;
+  if (stopPush && stopPush.deviceId) {
+    const button = stopPush.button || stopPush.push || "1";
+    return [{
+      deviceId: String(stopPush.deviceId),
+      command: "push",
+      label: `Stop ${env.key}`,
+      value: button
+    }];
+  }
 
   const configuredAction = normalizeSceneAction(
     env.sceneActions?.off || env.sceneAction?.off || env.sceneCommand?.off,

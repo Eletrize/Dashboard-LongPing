@@ -179,6 +179,10 @@ const CLIENT_CONFIG = {
                     { label: "Projetores", icon: "icon-projetor.svg", route: "tv" }
                 ]
             },
+            sceneButtons: {
+                start: { deviceId: "159", button: "1" },
+                stop: { deviceId: "160", button: "1" }
+            },
             // ┌─────────────────────────────────────────────────────────────────┐
             // │ CONTROLE DE MÍDIA - Configure dispositivos de áudio/vídeo aqui │
             // │                                                                 │
@@ -382,6 +386,10 @@ const CLIENT_CONFIG = {
                     volumeLabel: "Volume geral (Zona 3)"
                 }
             },
+            sceneButtons: {
+                start: { deviceId: "165", button: "1" },
+                stop: { deviceId: "166", button: "1" }
+            },
             lights: [
                 { id: "60", name: "Spots" },
                 { id: "53", name: "Sanca Parede" },
@@ -423,6 +431,14 @@ const CLIENT_CONFIG = {
             features: {
                 feature1: { label: "Iluminação", icon: "icon-small-light-off.svg", route: "luzes" },
                 featureScene: { label: "Executar Cenário", icon: "icon-scenes.svg", action: "executeScene" }
+            },
+            sceneButtons: {
+                start: { deviceId: "167", button: "1" },
+                stop: { deviceId: "168", button: "1" }
+            },
+            sceneButtons: {
+                start: { deviceId: "162", button: "1" },
+                stop: { deviceId: "180", button: "1" }
             },
             lights: [
                 { id: "64", name: "Led Parede" },
@@ -486,6 +502,10 @@ const CLIENT_CONFIG = {
                     volumeLabel: "Volume geral"
                 }
             },
+            sceneButtons: {
+                start: { deviceId: "163", button: "1" },
+                stop: { deviceId: "164", button: "1" }
+            },
             lights: [
                 { id: "40", name: "Spots" },
                 { id: "44", name: "Spots TV" },
@@ -526,6 +546,10 @@ const CLIENT_CONFIG = {
                     volumeDeviceId: "",
                     volumeLabel: "Volume geral"
                 }
+            },
+            sceneButtons: {
+                start: { deviceId: "175", button: "1" },
+                stop: { deviceId: "177", button: "1" }
             },
             lights: [
                 { id: "40", name: "Spots" },
@@ -595,6 +619,10 @@ const CLIENT_CONFIG = {
                         volumeLabel: "Volume Processo Esquerda"
                     }
                 ]
+            },
+            sceneButtons: {
+                start: { deviceId: "178", button: "1" },
+                stop: { deviceId: "179", button: "1" }
             },
             lights: [
                 { id: "40", name: "Spots" },
@@ -694,6 +722,10 @@ const CLIENT_CONFIG = {
                     volumeDeviceId: ["219"],
                     volumeLabel: "Volume geral (Zona 4)"
                 }
+            },
+            sceneButtons: {
+                start: { deviceId: "173", button: "1" },
+                stop: { deviceId: "174", button: "1" }
             },
             lights: [
                 { id: "42", name: "Led Nicho" },
