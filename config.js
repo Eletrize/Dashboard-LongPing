@@ -377,7 +377,7 @@ const CLIENT_CONFIG = {
                 ],
                 playback: {
                     powerDevices: ["218"],
-                    transportDeviceId: null,
+                    transportDeviceId: "125",
                     volumeDeviceId: ["218"],
                     volumeLabel: "Volume geral (Zona 3)"
                 }
