@@ -1580,10 +1580,6 @@
                   <img src="images/icons/arrow-down.svg" alt="Expandir">
                 </button>
               </div>
-              <div class="media-panel__actions media-panel__actions--stacked">
-                <button type="button" class="media-panel__action-btn media-panel__action-btn--on" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'on')">${typeof translateText === 'function' ? translateText('Ligar') : 'Ligar'}</button>
-                <button type="button" class="media-panel__action-btn" onclick="handleMediaGroupCommand('${safeEnvKey}', '${groupKey}', 'off')">${typeof translateText === 'function' ? translateText('Desligar') : 'Desligar'}</button>
-              </div>
             </header>
             <div class="media-panel__body" data-section="${sectionId}">
               <div class="media-panel__grid">
@@ -1637,8 +1633,6 @@
         const pauseLabel = typeof translateText === 'function' ? translateText('Pausar') : 'Pausar';
         const stopLabel = typeof translateText === 'function' ? translateText('Parar') : 'Parar';
         const muteLabel = typeof translateText === 'function' ? translateText('Ativar mute') : 'Ativar mute';
-        const onLabel = typeof translateText === 'function' ? translateText('Ligar') : 'Ligar';
-        const offLabel = typeof translateText === 'function' ? translateText('Desligar') : 'Desligar';
 
         return `
           <section class="media-panel__section media-panel__section--playback" data-group="playback-${safePlaybackKey}">
@@ -1650,10 +1644,6 @@
                     <h2>${audioTitle}</h2>
                   </div>
                 </div>
-              </div>
-              <div class="media-panel__actions media-panel__actions--stacked">
-                <button type="button" class="media-panel__action-btn media-panel__action-btn--on${isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-playback-power="on" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'on', '${safePlaybackKey}')">${onLabel}</button>
-                <button type="button" class="media-panel__action-btn${!isPowerOn ? ' is-active' : ''}" data-env="${safeEnvKey}" data-playback-key="${safePlaybackKey}" data-playback-power="off" onclick="handlePlaybackPowerCommand('${safeEnvKey}', 'off', '${safePlaybackKey}')">${offLabel}</button>
               </div>
             </header>
             <div class="media-panel__body is-open" data-section="${sectionId}">
